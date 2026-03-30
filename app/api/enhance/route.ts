@@ -1,51 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
+import Replicate from "replicate";
+
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN,
+});
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("image") as File;
-    const scale = formData.get("scale") || "4";
+    const scale = parseInt(formData.get("scale") as string) || 4;
     const faceEnhance = formData.get("face_enhance") === "true";
 
     if (!file) {
-      return NextResponse.json(
-        { error: "No image file provided." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No image file provided." }, { status: 400 });
     }
 
-    // In a real implementation:
-    // 1. Convert File to Blob/Buffer
-    // 2. Send to Replicate API (Real-ESRGAN or Codeformer)
-    // 3. Return the processed URL
+    // Checking if token exists to alert you explicitly if forgotten
+    if (!process.env.REPLICATE_API_TOKEN) {
+      return NextResponse.json({ error: "API Token missing in .env.local" }, { status: 500 });
+    }
 
-    /* Example Replicate integration:
-      import Replicate from "replicate";
-      const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
-      
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const base64Image = `data:${file.type};base64,${buffer.toString("base64")}`;
+    // Convert file to Base64 format for Replicate
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const base64Image = `data:${file.type};base64,${buffer.toString("base64")}`;
 
-      const model = faceEnhance 
-        ? "sczhou/codeformer:7de2ea26c61f15beb5c10d7a4b140b0e27140f01b699ef7f2f1fc4ecbb2b45d5" 
-        : "nightmareai/real-esrgan:42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b";
-      
-      const output = await replicate.run(model, {
-        input: { image: base64Image, face_upsample: faceEnhance, scale: parseInt(scale) }
-      });
+    // Select optimal Model based on if the user wants to enhance a face
+    const modelVersion = faceEnhance
+      ? "sczhou/codeformer:7de2ea26c61f15beb5c10d7a4b140b0e27140f01b699ef7f2f1fc4ecbb2b45d5"
+      : "nightmareai/real-esrgan:42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b";
 
-      return NextResponse.json({ url: output });
-    */
+    // Replicate Run
+    const output = await replicate.run(modelVersion as any, {
+      input: {
+        image: base64Image,
+        scale: scale,
+        face_upsample: faceEnhance,
+        background_enhance: true,
+      },
+    });
 
-    return NextResponse.json(
-      { message: "API route initialized. Set up Replicate tokens to enable processing." },
-      { status: 501 }
-    );
+    return NextResponse.json({ url: output });
   } catch (error) {
-    console.error("Error enhancing image:", error);
-    return NextResponse.json(
-      { error: "Failed to enhance image." },
-      { status: 500 }
-    );
+    console.error("Enhance API Error:", error);
+    return NextResponse.json({ error: "Failed to process image." }, { status: 500 });
   }
 }

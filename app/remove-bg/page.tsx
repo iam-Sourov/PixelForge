@@ -26,20 +26,32 @@ export default function RemoveBgPage() {
     setIsProcessing(true);
     
     try {
-      // In a real app, send to /api/remove-bg
-      // const formData = new FormData(); formData.append("image", file);
-      // const res = await fetch("/api/remove-bg", { method: "POST", body: formData });
-      // if (!res.ok) throw new Error("API failed");
+      const formData = new FormData(); 
+      formData.append("image", file);
+      const res = await fetch("/api/remove-bg", { method: "POST", body: formData });
       
-      // MOCK result for now: we use a placeholder image for demo
-      await new Promise((r) => setTimeout(r, 2000));
-      setResultUrl(objectUrl); // In reality, this would be the removed background URL
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Server error occurred");
+      }
       
-    } catch (error) {
-      setErrorText("Oops, our servers are overloaded. Please try a different image.");
+      const data = await res.json();
+      setResultUrl(data.url);
+    } catch (error: any) {
+      setErrorText(error.message || "Oops, failed to process. Please try again.");
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleDownload = () => {
+    if (!resultUrl) return;
+    const link = document.createElement("a");
+    link.href = resultUrl;
+    link.download = `removed-bg-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const clearImage = () => {
@@ -183,7 +195,7 @@ export default function RemoveBgPage() {
             </div>
             
             <div className="rounded-2xl shadow-xl shadow-primary/10">
-              <Button size="lg" className="h-14 w-full rounded-2xl text-base shadow-sm">
+              <Button size="lg" className="h-14 w-full rounded-2xl text-base shadow-sm" onClick={handleDownload}>
                 <Download className="mr-2 h-5 w-5" />
                 Download Full HD
               </Button>

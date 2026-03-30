@@ -14,6 +14,7 @@ export default function PassportPage() {
   const [activeStep, setActiveStep] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [bgColor, setBgColor] = useState<"white" | "gray" | "blue">("white");
+  const [resultBlobUrl, setResultBlobUrl] = useState<string | null>(null);
   
   // Mock validation results
   const [checks, setChecks] = useState({
@@ -38,9 +39,37 @@ export default function PassportPage() {
     setActiveStep(3);
   };
 
-  const confirmBackground = () => {
-    setActiveStep(4);
-    setTimeout(() => setActiveStep(5), 1500); // Simulate checks
+  const confirmBackground = async () => {
+    if (!file) return;
+    setActiveStep(4); // Compliance check loading phase
+    
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("bg_color", bgColor);
+      
+      const res = await fetch("/api/passport", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Failed to process passport photo");
+      
+      const blob = await res.blob();
+      setResultBlobUrl(URL.createObjectURL(blob));
+      
+      setActiveStep(5);
+    } catch (e: any) {
+      console.error(e);
+      alert(e.message || "Something went wrong.");
+      setActiveStep(3);
+    }
+  };
+
+  const downloadSingle = () => {
+    if (!resultBlobUrl) return;
+    const a = document.createElement("a");
+    a.href = resultBlobUrl;
+    a.download = `passport-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const getStepStatus = (step: number): StepStatus => {
@@ -147,6 +176,10 @@ export default function PassportPage() {
             
             {(getStepStatus(4) === "active" || getStepStatus(4) === "completed") && (
               <div className="space-y-3 pl-9">
+                {getStepStatus(4) === "active" ? (
+                   <p className="text-sm text-primary animate-pulse">Generating exact dimension crop using ML...</p>
+                ) : (
+                  <>
                 <div className="flex items-center gap-3 text-sm font-medium text-emerald-500">
                   <CheckCircle2 className="h-4 w-4" /> <span>Correct size (45×35mm @ 300 DPI)</span>
                 </div>
@@ -159,6 +192,8 @@ export default function PassportPage() {
                 <div className="flex items-center gap-3 text-sm font-medium text-emerald-500">
                   <CheckCircle2 className="h-4 w-4" /> <span>ICAO ratio compliance</span>
                 </div>
+                </>
+                )}
               </div>
             )}
           </div>
@@ -172,7 +207,7 @@ export default function PassportPage() {
             
             {getStepStatus(5) === "active" && (
               <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                <Button size="lg" className="flex-1 rounded-xl shadow-lg">
+                <Button size="lg" className="flex-1 rounded-xl shadow-lg" onClick={downloadSingle}>
                   <ImageIcon className="mr-2 w-5 h-5"/> Single Photo (PNG)
                 </Button>
                 <Button size="lg" variant="secondary" className="flex-1 rounded-xl shadow-lg bg-white text-black hover:bg-neutral-200">

@@ -52,19 +52,55 @@ export default function EnhancePage() {
     }, 400);
 
     try {
-      // API integration point
-      // const res = await fetch("/api/enhance", { method: "POST", body });
-      await new Promise((r) => setTimeout(r, 4000));
+      const formData = new FormData();
+      if (file) formData.append("image", file);
+      formData.append("scale", scale.toString());
+      formData.append("face_enhance", faceEnhance.toString());
+
+      const res = await fetch("/api/enhance", { method: "POST", body: formData });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Server error occurred");
+      }
+      
+      const data = await res.json();
       setProgress(100);
-      setResultUrl(originalUrl); // Placeholder for result
-    } catch (e) {
-      setErrorText("Enhancement failed. This usually happens if the model is warming up. Please try again.");
+      setResultUrl(data.url);
+    } catch (e: any) {
+      setErrorText(e.message || "Enhancement failed. Please try again.");
     } finally {
       clearInterval(interval);
       setTimeout(() => setIsProcessing(false), 500);
     }
   };
 
+  const downloadEnhanced = async () => {
+    if (!resultUrl) return;
+    try {
+      // Fetch the image as a blob to force a download instead of opening a new tab
+      const fetchResponse = await fetch(resultUrl);
+      const blob = await fetchResponse.blob();
+      const localUrl = URL.createObjectURL(blob);
+      
+      const a = document.createElement("a");
+      a.href = localUrl;
+      a.download = `enhanced-${scale}x-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(localUrl);
+    } catch (er) {
+      // Fallback to direct link if CORS fails
+      const a = document.createElement("a");
+      a.href = resultUrl;
+      a.download = `enhanced-${scale}x-${Date.now()}.png`;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
   const clearImage = () => {
     setFile(null);
     if (originalUrl) URL.revokeObjectURL(originalUrl);
@@ -234,6 +270,7 @@ export default function EnhancePage() {
             ) : (
               <Button 
                 size="lg" 
+                onClick={downloadEnhanced}
                 className="h-16 w-full rounded-[1.25rem] bg-white text-black hover:bg-neutral-200 text-base font-bold shadow-xl transition-all duration-300 hover:scale-[1.02]"
               >
                 <Download className="mr-2 h-5 w-5" />

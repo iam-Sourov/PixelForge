@@ -13,10 +13,6 @@ export default function Home() {
         <Spotlight className="top-20 left-full md:left-3/4 hidden md:block" fill="#7C3AED" />
         
         <div className="z-10 mx-auto flex max-w-5xl flex-col items-center text-center">
-          <div className="mb-6 inline-flex items-center rounded-full border border-border/50 bg-muted/40 px-3 py-1 text-sm font-medium backdrop-blur-md">
-            <Sparkles className="mr-2 h-4 w-4 text-primary" />
-            <span className="text-muted-foreground">PixelForge v1.0 is live</span>
-          </div>
           
           <h1 className="mb-6 font-heading text-6xl font-bold tracking-tighter text-foreground sm:text-7xl lg:text-8xl">
             Photos.<br className="hidden sm:block" />
