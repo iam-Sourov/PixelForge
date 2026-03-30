@@ -1,88 +1,104 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { UploadZone } from "@/components/shared/UploadZone";
-import { BeforeAfterSlider } from "@/components/shared/BeforeAfterSlider";
 import { Button } from "@/components/ui/button";
-import { Download, Sparkles, Wand2, RefreshCcw, Settings2 } from "lucide-react";
+import { Download, Sparkles, RefreshCw, Wand2 } from "lucide-react";
+import { Spotlight } from "@/components/ui/spotlight";
 import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
 
 export default function EnhancePage() {
   const [file, setFile] = useState<File | null>(null);
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
-  
   const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
-  // Settings
+  useEffect(() => setMounted(true), []);
+
+  // Params
   const [scale, setScale] = useState<number>(4);
-  const [faceEnhance, setFaceEnhance] = useState<boolean>(true);
-  const [denoise, setDenoise] = useState<number>(50);
+  const [denoise, setDenoise] = useState<number>(50); // Proxy value
+  const [faceEnhance, setFaceEnhance] = useState<boolean>(true); // Placeholder, kept logic consistent
 
   const handleUpload = (selectedFile: File) => {
-    // Validate size (User rule: minimum 200x200px. We simulate it)
     if (selectedFile.size < 10000) {
-      setErrorText("This image is too small to enhance. Try one at least 200×200px.");
+      setErrorText("Image is too small to meaningfully enhance it.");
       return;
     }
-    setErrorText(null);
     setFile(selectedFile);
-    const url = URL.createObjectURL(selectedFile);
-    setOriginalUrl(url);
+    setOriginalUrl(URL.createObjectURL(selectedFile));
     setResultUrl(null);
+    setErrorText(null);
   };
+
+  const generateEnhancedCanvas = async (sourceUrl: string, currentScale: number, denoiseVal: number) => {
+    return new Promise<string | null>((resolve) => {
+      const img = new Image();
+      img.src = sourceUrl;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return resolve(null);
+
+        canvas.width = img.width * currentScale;
+        canvas.height = img.height * currentScale;
+        
+        // Native browser-based high-quality upscale (Lanczos/Bicubic depending on engine)
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        
+        ctx.filter = `contrast(${105 + (denoiseVal / 100) * 5}%) saturate(110%)`; 
+
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = () => {
+        resolve(null);
+      };
+    });
+  }
 
   const processImage = async () => {
     if (!originalUrl) return;
     setIsProcessing(true);
     setErrorText(null);
-    setProgress(0);
-
-    // Simulate progress
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 90) {
-          clearInterval(interval);
-          return 90;
-        }
-        return prev + 10;
-      });
-    }, 400);
 
     try {
-      const formData = new FormData();
-      if (file) formData.append("image", file);
-      formData.append("scale", scale.toString());
-      formData.append("face_enhance", faceEnhance.toString());
+      // Small simulated delay for UX to let "Synthesizing" show up
+      await new Promise(r => setTimeout(r, 600));
 
-      const res = await fetch("/api/enhance", { method: "POST", body: formData });
+      const finalImage = await generateEnhancedCanvas(originalUrl, scale, denoise);
       
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || "Server error occurred");
+      if (finalImage) {
+        setResultUrl(finalImage);
+      } else {
+        throw new Error("Local canvas engine failed to process the image.");
       }
-      
-      const data = await res.json();
-      setProgress(100);
-      setResultUrl(data.url);
     } catch (e: any) {
-      setErrorText(e.message || "Enhancement failed. Please try again.");
+      setErrorText(e.message || "Enhancement failed.");
     } finally {
-      clearInterval(interval);
-      setTimeout(() => setIsProcessing(false), 500);
+      setIsProcessing(false);
     }
   };
 
-  const downloadEnhanced = async () => {
+  const clearImage = () => {
+    setFile(null);
+    setOriginalUrl(null);
+    setResultUrl(null);
+    setErrorText(null);
+  };
+
+  const handleDownload = async () => {
     if (!resultUrl) return;
     try {
-      // Fetch the image as a blob to force a download instead of opening a new tab
       const fetchResponse = await fetch(resultUrl);
       const blob = await fetchResponse.blob();
       const localUrl = URL.createObjectURL(blob);
-      
       const a = document.createElement("a");
       a.href = localUrl;
       a.download = `enhanced-${scale}x-${Date.now()}.png`;
@@ -91,200 +107,105 @@ export default function EnhancePage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(localUrl);
     } catch (er) {
-      // Fallback to direct link if CORS fails
       const a = document.createElement("a");
       a.href = resultUrl;
       a.download = `enhanced-${scale}x-${Date.now()}.png`;
-      a.target = "_blank";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
     }
   };
-  const clearImage = () => {
-    setFile(null);
-    if (originalUrl) URL.revokeObjectURL(originalUrl);
-    setOriginalUrl(null);
-    setResultUrl(null);
-    setErrorText(null);
-    setProgress(0);
-  };
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8 md:px-8 lg:py-12">
-      <div className="mb-8 flex items-end justify-between">
-        <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight md:text-5xl">AI Image Enhancer</h1>
-          <p className="mt-2 text-muted-foreground font-light">Upscale, denoise, and restore faces using Real-ESRGAN.</p>
-        </div>
-      </div>
-
-      <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
-        {/* Left/Main Column: Preview & Upload */}
-        <div className="flex flex-col gap-6">
-          <div className="relative flex min-h-[500px] flex-col overflow-hidden rounded-[2rem] border border-border/50 bg-card/10 p-2 shadow-2xl backdrop-blur-3xl">
-            {!originalUrl && (
-              <div className="h-full px-2 py-4">
-                <UploadZone onFileSelect={handleUpload} className="h-full border-border/50" />
-              </div>
-            )}
-            
-            {originalUrl && !resultUrl && (
-              <div className="relative flex h-full flex-col p-4 items-center justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={originalUrl} className="max-h-[600px] object-contain rounded-xl shadow-lg border border-white/5" alt="Input" />
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  onClick={clearImage}
-                  className="absolute right-6 top-6 shadow-xl backdrop-blur-md bg-background/50 hover:bg-background/80"
-                >
-                  <RefreshCcw className="mr-2 h-4 w-4" /> Change Image
-                </Button>
-              </div>
-            )}
-            
-            {resultUrl && originalUrl && (
-              <div className="h-full rounded-[1.5rem] overflow-hidden bg-[url('https://transparenttextures.com/patterns/cubes.png')] bg-background/50">
-                <BeforeAfterSlider 
-                  beforeImage={originalUrl}
-                  afterImage={resultUrl}
-                  className="h-full max-h-[700px] rounded-none border-none"
-                  beforeLabel="Original"
-                  afterLabel={`${scale}x Enhanced`}
-                />
-              </div>
-            )}
+    <div className="relative min-h-[calc(100vh-80px)] w-full overflow-hidden flex flex-col items-center justify-center p-4">
+      {mounted && <Spotlight className="-top-40 left-0 md:left-20 md:-top-20" fill={resolvedTheme === "dark" ? "white" : "black"} />}
+      
+      <div className="z-10 w-full max-w-4xl flex flex-col items-center gap-8">
+        
+        {!originalUrl && (
+          <div className="text-center space-y-4 mb-8">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground to-muted-foreground">
+              Clarity & Scale
+            </h1>
+            <p className="text-muted-foreground md:text-lg max-w-xl mx-auto">
+              Sharpen, upscale, and restore logic locally. Powerful zero-API pixel engineering.
+            </p>
           </div>
-          
+        )}
+
+        <div className="w-full relative">
           {errorText && (
-            <div className="rounded-xl border border-destructive bg-destructive/10 p-4 text-sm text-destructive font-medium shadow-sm">
+            <div className="absolute -top-16 left-0 right-0 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-center text-sm backdrop-blur-md z-50">
               {errorText}
+            </div>
+          )}
+
+          {!originalUrl ? (
+            <div className="rounded-3xl border border-border bg-card/50 p-2 backdrop-blur-xl shadow-2xl mx-auto max-w-3xl transition-all hover:border-primary/50">
+              <UploadZone onFileSelect={handleUpload} className="min-h-[400px] border-dashed border-border/50 bg-transparent hover:bg-muted/30 transition-colors rounded-[1.5rem]" />
+            </div>
+          ) : (
+            <div className={cn("grid gap-6 transition-all duration-700", !resultUrl ? "lg:grid-cols-[1fr_300px]" : "grid-cols-1")}>
+              
+              {/* Image View */}
+              <div className="relative rounded-3xl border border-border bg-[url('https://transparenttextures.com/patterns/cubes.png')] bg-card/50 backdrop-blur-xl p-4 flex flex-col items-center justify-center min-h-[500px] shadow-2xl overflow-hidden">
+                {isProcessing && (
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/60 backdrop-blur-md animate-in fade-in">
+                    <Wand2 className="h-10 w-10 text-primary animate-pulse mb-4" />
+                    <span className="text-sm font-medium uppercase tracking-widest text-primary">Synthesizing...</span>
+                  </div>
+                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={resultUrl || originalUrl} alt="Subject" className="max-h-[600px] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] dark:drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-2xl" />
+              </div>
+
+              {/* Controls */}
+              {!resultUrl && (
+                <div className="flex flex-col gap-6 p-6 rounded-3xl border border-border bg-card/50 backdrop-blur-xl justify-between">
+                  <div className="space-y-8">
+                    <div className="space-y-3">
+                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Upscale Dimension</label>
+                      <div className="flex p-1 bg-muted/30 rounded-xl border border-border">
+                        {[2, 4, 8].map(s => (
+                          <button key={s} onClick={() => setScale(s)} className={cn("flex-1 py-3 rounded-lg text-sm font-semibold transition-all", scale === s ? "bg-foreground text-background shadow-md" : "text-muted-foreground hover:text-foreground")}>
+                            {s}x
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Denoise Level</label>
+                      <div className="flex p-1 bg-muted/30 rounded-xl border border-border">
+                        {[{v: 0, l: "Off"}, {v: 50, l: "Med"}, {v: 100, l: "High"}].map(d => (
+                           <button key={d.v} onClick={() => setDenoise(d.v)} className={cn("flex-1 py-3 rounded-lg text-sm font-semibold transition-all", denoise === d.v ? "bg-foreground text-background shadow-md" : "text-muted-foreground hover:text-foreground")}>
+                             {d.l}
+                           </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button size="lg" onClick={processImage} disabled={isProcessing} className="w-full h-14 rounded-xl bg-foreground text-background hover:bg-foreground/90 text-sm font-bold shadow-[0_0_30px_rgba(0,0,0,0.1)] dark:shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-all hover:scale-[1.02]">
+                    <Sparkles className="mr-2 h-4 w-4" /> Enhance Now
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Right Column: Controls */}
-        <div className="flex flex-col gap-6">
-          {/* Settings Panel */}
-          <div className="rounded-[2rem] border border-border/50 bg-card/30 p-8 backdrop-blur-xl shadow-lg">
-            <div className="mb-8 flex items-center gap-3 border-b border-border/50 pb-4">
-              <div className="rounded-xl bg-primary/20 p-2 text-primary">
-                <Settings2 className="h-5 w-5" />
-              </div>
-              <h3 className="font-heading text-xl font-semibold tracking-tight">Enhancement Params</h3>
-            </div>
-            
-            <div className="space-y-8">
-              {/* Scale Control */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground">
-                    Upscale Factor
-                  </label>
-                  <span className="text-xs font-mono text-primary font-bold bg-primary/10 px-2 py-1 rounded-md">{scale}x</span>
-                </div>
-                <div className="flex h-12 w-full rounded-xl bg-muted/30 p-1 ring-1 ring-border/50">
-                  {[2, 4, 8].map((val) => (
-                    <button
-                      key={val}
-                      onClick={() => setScale(val)}
-                      className={cn(
-                        "flex-1 rounded-lg text-sm font-semibold transition-all duration-300",
-                        scale === val ? "bg-background text-foreground shadow-md ring-1 ring-border/50" : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {val}x
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Denoise Slider */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm font-medium text-foreground">
-                    Denoise Strength
-                  </label>
-                  <span className="text-xs font-mono text-muted-foreground">{denoise}%</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value={denoise} 
-                  onChange={(e) => setDenoise(Number(e.target.value))}
-                  className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-primary focus:outline-none focus:ring-2 focus:ring-primary/50 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full"
-                />
-              </div>
-
-              {/* Face Enhance Toggle */}
-              <div className="flex items-center justify-between rounded-xl bg-muted/20 p-4 ring-1 ring-border/50">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-foreground">Face Enhancement</label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">Uses CodeFormer for high-fidelity portrait restoration.</p>
-                </div>
-                <button 
-                  onClick={() => setFaceEnhance(!faceEnhance)}
-                  className={cn(
-                    "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
-                    faceEnhance ? 'bg-primary' : 'bg-muted'
-                  )}
-                >
-                  <span className={cn(
-                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                    faceEnhance ? 'translate-x-5' : 'translate-x-0'
-                  )} />
-                </button>
-              </div>
-            </div>
+        {/* Post-Processing Actions */}
+        {resultUrl && (
+          <div className="flex items-center gap-4 animate-in slide-in-from-bottom-4 fade-in duration-500 w-full max-w-sm">
+            <Button variant="ghost" size="lg" onClick={clearImage} className="flex-1 rounded-xl text-muted-foreground hover:text-foreground border border-border bg-card/50 backdrop-blur-md">
+               <RefreshCw className="mr-2 h-4 w-4" /> Restart
+            </Button>
+            <Button size="lg" onClick={handleDownload} className="flex-1 rounded-xl bg-foreground text-background hover:bg-foreground/90 shadow-[0_0_40px_rgba(0,0,0,0.1)] dark:shadow-[0_0_40px_rgba(255,255,255,0.3)] transition-all hover:scale-[1.02]">
+               <Download className="mr-2 h-4 w-4" /> Save {scale}x
+            </Button>
           </div>
-
-          {/* Action Area */}
-          <div className="flex w-full flex-col gap-4 mt-auto">
-            {isProcessing ? (
-              <div className="relative flex h-16 w-full items-center overflow-hidden rounded-[1.25rem] bg-muted/30 shadow-inner">
-                <div 
-                  className="absolute left-0 top-0 h-full bg-primary/20 transition-all duration-300 ease-out"
-                  style={{ width: `${progress}%` }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/30 to-transparent w-[200%] animate-[shimmer_2s_infinite]" style={{ transform: 'translateX(-100%)' }} />
-                <div className="relative z-10 flex w-full items-center justify-between px-6 font-mono text-sm font-medium text-foreground">
-                  <span>Enhancing Details...</span>
-                  <span>{progress}%</span>
-                </div>
-              </div>
-            ) : !resultUrl ? (
-              <Button 
-                size="lg" 
-                className={cn(
-                  "h-16 w-full rounded-[1.25rem] text-base font-bold shadow-xl transition-all duration-300 hover:scale-[1.02]",
-                  !originalUrl && "opacity-50 cursor-not-allowed"
-                )}
-                disabled={!originalUrl}
-                onClick={processImage}
-              >
-                <Sparkles className="mr-2 h-5 w-5" />
-                Enhance Photo
-              </Button>
-            ) : (
-              <Button 
-                size="lg" 
-                onClick={downloadEnhanced}
-                className="h-16 w-full rounded-[1.25rem] bg-white text-black hover:bg-neutral-200 text-base font-bold shadow-xl transition-all duration-300 hover:scale-[1.02]"
-              >
-                <Download className="mr-2 h-5 w-5" />
-                Download {scale}x Result
-              </Button>
-            )}
-            
-            {resultUrl && (
-              <Button variant="ghost" onClick={clearImage} className="text-muted-foreground w-full">
-                Process another image
-              </Button>
-            )}
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

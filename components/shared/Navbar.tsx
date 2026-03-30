@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Navbar() {
   return (
@@ -25,6 +26,7 @@ export function Navbar() {
         </nav>
         
         <div className="flex items-center gap-4">
+          <ThemeToggle />
           <Button variant="ghost" className="hidden sm:inline-flex">
             Login
           </Button>

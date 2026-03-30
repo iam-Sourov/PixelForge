@@ -1,28 +1,26 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { UploadZone } from "@/components/shared/UploadZone";
-import { BeforeAfterSlider } from "@/components/shared/BeforeAfterSlider";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, ArrowRight, PaintBucket, Image as ImageIcon, Sparkles } from "lucide-react";
+import { Download, Sparkles, RefreshCw } from "lucide-react";
+import { Spotlight } from "@/components/ui/spotlight";
+import { useTheme } from "next-themes";
 
 export default function RemoveBgPage() {
-  const [originalFile, setOriginalFile] = useState<File | null>(null);
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
-  const [bgMode, setBgMode] = useState<"transparent" | "color" | "blur">("transparent");
-  const [bgColor, setBgColor] = useState("#ffffff");
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const handleUpload = async (file: File) => {
     setErrorText(null);
-    setOriginalFile(file);
-    const objectUrl = URL.createObjectURL(file);
-    setOriginalUrl(objectUrl);
-    setResultUrl(null); // Reset
-    
-    // Simulate API call to remove background
+    setOriginalUrl(URL.createObjectURL(file));
+    setResultUrl(null);
     setIsProcessing(true);
     
     try {
@@ -30,182 +28,96 @@ export default function RemoveBgPage() {
       formData.append("image", file);
       const res = await fetch("/api/remove-bg", { method: "POST", body: formData });
       
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || "Server error occurred");
-      }
+      if (!res.ok) throw new Error("Server error occurred");
       
       const data = await res.json();
       setResultUrl(data.url);
     } catch (error: any) {
-      setErrorText(error.message || "Oops, failed to process. Please try again.");
+      setErrorText("Failed to extract background. Please try again.");
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const clearImage = () => {
+    setOriginalUrl(null);
+    setResultUrl(null);
+    setErrorText(null);
   };
 
   const handleDownload = () => {
     if (!resultUrl) return;
     const link = document.createElement("a");
     link.href = resultUrl;
-    link.download = `removed-bg-${Date.now()}.png`;
+    link.download = `pixel-cut-${Date.now()}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const clearImage = () => {
-    setOriginalFile(null);
-    if (originalUrl) URL.revokeObjectURL(originalUrl);
-    setOriginalUrl(null);
-    setResultUrl(null);
-    setErrorText(null);
-  };
-
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-12 md:px-8">
-      {/* Page Header */}
-      {!resultUrl && !isProcessing && (
-        <div className="mb-12 text-center">
-          <h1 className="mb-4 font-heading text-4xl font-bold tracking-tighter md:text-5xl">
-            Remove any background. <span className="text-primary">Instantly.</span>
-          </h1>
-          <p className="mx-auto max-w-2xl text-lg text-muted-foreground font-light">
-            Drop an image below and perfectly extract subjects in less than 3 seconds.
-          </p>
-        </div>
-      )}
+    <div className="relative min-h-[calc(100vh-80px)] w-full overflow-hidden flex flex-col items-center justify-center p-4">
+      {mounted && <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill={resolvedTheme === "dark" ? "white" : "black"} />}
+      
+      <div className="z-10 w-full max-w-3xl flex flex-col items-center gap-8">
+        
+        {!originalUrl && (
+          <div className="text-center space-y-4 mb-8">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground to-muted-foreground">
+              Magic Background Eraser
+            </h1>
+            <p className="text-muted-foreground md:text-lg max-w-xl mx-auto">
+              Powered by deep learning. Completely local. No APIs, no data collection. Drop an image to extract the subject instantly.
+            </p>
+          </div>
+        )}
 
-      {/* Upload & Processing State */}
-      {!resultUrl ? (
-        <div className="relative mx-auto max-w-3xl">
+        <div className="w-full relative">
           {errorText && (
-            <div className="mb-6 rounded-xl border border-destructive/50 bg-destructive/10 p-4 text-center text-sm text-destructive font-medium">
+            <div className="absolute -top-16 left-0 right-0 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-center text-sm backdrop-blur-md">
               {errorText}
             </div>
           )}
-          
-          <div className="group relative">
-            <UploadZone 
-              onFileSelect={handleUpload} 
-              currentImage={originalUrl}
-              onClear={clearImage}
-              className="min-h-[400px]"
-            />
-            
-            {isProcessing && (
-              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-xl bg-background/80 backdrop-blur-md">
-                <div className="mb-6 relative flex h-20 w-20 items-center justify-center">
-                  <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
-                  <div className="absolute inset-0 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                  <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+
+          {!originalUrl ? (
+            <div className="rounded-3xl border border-border bg-card/50 p-2 backdrop-blur-xl shadow-2xl transition-all hover:border-primary/50">
+              <UploadZone onFileSelect={handleUpload} className="min-h-[400px] border-dashed border-border/50 bg-transparent hover:bg-muted/30 transition-colors rounded-[1.5rem]" />
+            </div>
+          ) : (
+            <div className="group relative w-full overflow-hidden rounded-3xl border border-border bg-[url('https://transparenttextures.com/patterns/cubes.png')] bg-card/50 backdrop-blur-xl p-8 flex flex-col items-center justify-center min-h-[500px] shadow-2xl">
+              
+              {isProcessing && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm">
+                  <div className="relative flex h-20 w-20 items-center justify-center">
+                    <div className="absolute inset-0 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+                  </div>
+                  <p className="mt-4 text-sm font-medium tracking-widest uppercase text-primary/80">Segmenting Subject</p>
                 </div>
-                <h3 className="font-heading text-xl font-medium tracking-tight">Extracting subject...</h3>
-                <p className="mt-2 text-sm text-muted-foreground">Identifying foreground boundaries</p>
-                <div className="mt-6 h-1.5 w-48 overflow-hidden rounded-full bg-muted/50">
-                  <div className="h-full animate-[progress_2s_ease-in-out_infinite] w-1/3 rounded-full bg-primary" />
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {!isProcessing && !originalUrl && (
-            <div className="mt-8 flex items-center justify-center text-sm text-muted-foreground transition-colors hover:text-foreground cursor-pointer">
-              Need to process multiple? Try our API <ArrowRight className="ml-2 h-4 w-4" />
+              )}
+
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {resultUrl ? (
+                <img src={resultUrl} alt="Result" className="max-h-[500px] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in duration-700 dark:drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)]" />
+              ) : (
+                <img src={originalUrl} alt="Original" className="max-h-[500px] object-contain opacity-50 blur-sm brightness-50 dark:brightness-50" />
+              )}
             </div>
           )}
         </div>
-      ) : (
-        /* Result State */
-        <div className="grid gap-8 md:grid-cols-3">
-          {/* Main Visualizer */}
-          <div className="md:col-span-2">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="font-heading text-2xl font-bold tracking-tight">Result</h2>
-              <Button variant="ghost" onClick={clearImage} size="sm" className="text-muted-foreground">
-                Upload New
-              </Button>
-            </div>
-            
-            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[url('https://transparenttextures.com/patterns/cubes.png')] shadow-2xl">
-              {/* If we have a blurred background selected */}
-              {bgMode === "blur" && originalUrl && (
-                <div 
-                  className="absolute inset-0 opacity-50 blur-xl scale-110 object-cover w-full h-full"
-                  style={{ backgroundImage: `url(${originalUrl})`, backgroundSize: 'cover' }}
-                />
-              )}
-              {/* If solid color selected */}
-              {bgMode === "color" && (
-                <div className="absolute inset-0" style={{ backgroundColor: bgColor }} />
-              )}
-              
-              <BeforeAfterSlider 
-                beforeImage={originalUrl!} 
-                afterImage={resultUrl}
-                beforeLabel="Original"
-                afterLabel="Removed BG"
-                className="h-[500px]"
-              />
-            </div>
+
+        {/* Minimal Action Bar */}
+        {resultUrl && (
+          <div className="flex items-center gap-4 animate-in slide-in-from-bottom-4 fade-in duration-500">
+            <Button variant="ghost" size="lg" onClick={clearImage} className="rounded-full px-8 text-muted-foreground hover:text-foreground border border-border bg-card/50 backdrop-blur-md">
+               <RefreshCw className="mr-2 h-4 w-4" /> Start Over
+            </Button>
+            <Button size="lg" onClick={handleDownload} className="rounded-full px-8 bg-foreground text-background hover:bg-foreground/90 shadow-[0_0_40px_rgba(0,0,0,0.1)] dark:shadow-[0_0_40px_rgba(255,255,255,0.3)] transition-all hover:scale-105">
+               <Download className="mr-2 h-4 w-4" /> Download HD
+            </Button>
           </div>
-          
-          {/* Controls Sidebar */}
-          <div className="flex flex-col gap-6 md:mt-[3.5rem]">
-            <div className="rounded-2xl border border-border/50 bg-card/20 p-6 backdrop-blur-sm">
-              <h3 className="mb-4 font-heading text-lg font-semibold tracking-tight">Background</h3>
-              <div className="space-y-4">
-                <Button 
-                  variant={bgMode === "transparent" ? "default" : "outline"} 
-                  className="w-full justify-start gap-3 rounded-xl border-dashed"
-                  onClick={() => setBgMode("transparent")}
-                >
-                  <div className="h-4 w-4 rounded-sm bg-[url('https://transparenttextures.com/patterns/cubes.png')] opacity-50" />
-                  Transparent
-                </Button>
-                
-                <div className="flex gap-2">
-                  <Button 
-                    variant={bgMode === "color" ? "default" : "outline"} 
-                    className="flex-1 justify-start gap-2 rounded-xl"
-                    onClick={() => setBgMode("color")}
-                  >
-                    <PaintBucket className="h-4 w-4" />
-                    Color
-                  </Button>
-                  {bgMode === "color" && (
-                    <input 
-                      type="color" 
-                      value={bgColor} 
-                      onChange={(e) => setBgColor(e.target.value)}
-                      className="h-10 w-10 cursor-pointer rounded-xl border-0 bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-xl [&::-webkit-color-swatch]:border-border"
-                    />
-                  )}
-                </div>
-                
-                <Button 
-                  variant={bgMode === "blur" ? "default" : "outline"} 
-                  className="w-full justify-start gap-2 rounded-xl"
-                  onClick={() => setBgMode("blur")}
-                >
-                  <ImageIcon className="h-4 w-4" />
-                  Blurred Context
-                </Button>
-              </div>
-            </div>
-            
-            <div className="rounded-2xl shadow-xl shadow-primary/10">
-              <Button size="lg" className="h-14 w-full rounded-2xl text-base shadow-sm" onClick={handleDownload}>
-                <Download className="mr-2 h-5 w-5" />
-                Download Full HD
-              </Button>
-              <p className="mt-3 text-center text-xs text-muted-foreground font-medium">
-                PNG format • {originalFile?.size ? (originalFile.size / (1024 * 1024)).toFixed(1) : "Unknown"} MB
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

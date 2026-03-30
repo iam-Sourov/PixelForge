@@ -33,7 +33,30 @@
   --radius-sm: calc(var(--radius) - 4px);
 }
 
-:root, .dark {
+:root {
+  --background: #fafafa;
+  --foreground: #09090b;
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #7c3aed;
+  --radius: 0.75rem;
+}
+
+.dark {
   --background: #0a0a0a;
   --foreground: #f5f5f3;
   --card: #121212;

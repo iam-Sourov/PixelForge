@@ -39,13 +39,4 @@ npm run dev
 
 3. Navigate to [http://localhost:3000](http://localhost:3000).
 
-## Production Back-End Roadmap (API Enablement)
-Currently, to isolate errors for front-end visual demonstrations without injecting unverified payload tokens, the UI utilizes localized simulated loading loops. 
-
-To bridge actual AI computation layers to the front-end components, you must insert your model keys.
-
-*   `app/api/enhance/route.ts` - Implement `process.env.REPLICATE_API_TOKEN`
-*   `app/api/remove-bg/route.ts` - Implement `process.env.REMOVE_BG_KEY` or `RMBG` model tokens.
-*   `app/api/passport/route.ts` - Add `sharp` context and OpenCV or simpler face-recognition (e.g. `face-api.js`) for the bounding-box generation algorithm. 
-
 *Engineered with precision.*
