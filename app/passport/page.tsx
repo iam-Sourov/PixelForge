@@ -1,18 +1,19 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { UploadZone } from "@/components/shared/UploadZone";
 import { Button } from "@/components/ui/button";
-import { Download, RefreshCw, Sparkles, Check, Move, ZoomIn, Grid3X3, SlidersHorizontal } from "lucide-react";
+import { Download, RefreshCw, Sparkles, Check, Grid3X3 } from "lucide-react";
 import { Spotlight } from "@/components/ui/spotlight";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
-import { writePsd } from "ag-psd";
+import Cropper from "react-easy-crop";
 
 export default function PassportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isProcessingBg, setIsProcessingBg] = useState(false);
   const [transparentUrl, setTransparentUrl] = useState<string | null>(null);
+  const [transparentBlob, setTransparentBlob] = useState<Blob | null>(null);
   
   const [bgColor, setBgColor] = useState<"white" | "gray" | "blue">("white");
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -20,13 +21,10 @@ export default function PassportPage() {
   const [mounted, setMounted] = useState(false);
 
   // Editor states
-  const [scale, setScale] = useState(1);
-  const [offsetX, setOffsetX] = useState(0);
-  const [offsetY, setOffsetY] = useState(0);
-  const [showAdjustments, setShowAdjustments] = useState(false);
-
-  // Final outputs
-  const [resultSingleUrl, setResultSingleUrl] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -34,24 +32,16 @@ export default function PassportPage() {
     setFile(selectedFile);
     setIsProcessingBg(true);
     setErrorText(null);
-    setResultSingleUrl(null);
-    setScale(1);
-    setOffsetX(0);
-    setOffsetY(0);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
 
     try {
-      const formData = new FormData();
-      formData.append("image", selectedFile);
-      const res = await fetch("/api/passport", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Failed to remove background cleanly.");
+      const { removeBackground } = await import("@imgly/background-removal");
+      const blob = await removeBackground(selectedFile);
       
-      const blob = await res.blob();
+      setTransparentBlob(blob);
       const tUrl = URL.createObjectURL(blob);
       setTransparentUrl(tUrl);
-
-      // Auto-scan bounds and immediately trigger real-time generation
-      await scanAndCenterObject(tUrl);
-
     } catch (e: any) {
       setErrorText(e.message || "Failed to process image.");
     } finally {
@@ -59,174 +49,48 @@ export default function PassportPage() {
     }
   };
 
-  const scanAndCenterObject = async (imgUrl: string) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.src = imgUrl;
-      img.onload = () => {
-        const checkCanvas = document.createElement("canvas");
-        const ctx = checkCanvas.getContext("2d");
-        checkCanvas.width = img.width;
-        checkCanvas.height = img.height;
-        ctx?.drawImage(img, 0, 0);
-        
-        let minX = img.width, minY = img.height, maxX = 0, maxY = 0;
-        const data = ctx?.getImageData(0, 0, img.width, img.height).data;
-        if (data) {
-          for (let y = 0; y < img.height; y++) {
-            for (let x = 0; x < img.width; x++) {
-              if (data[(y * img.width + x) * 4 + 3] > 10) {
-                if (x < minX) minX = x;
-                if (x > maxX) maxX = x;
-                if (y < minY) minY = y;
-                if (y > maxY) maxY = y;
-              }
-            }
-          }
-        }
-        
-        const contentW = Math.max(maxX - minX, 1);
-        const contentH = Math.max(maxY - minY, 1);
-        
-        const targetW = 413;
-        const targetH = 531;
-        
-        const idealScale = Math.min((targetW * 0.8) / contentW, (targetH * 0.8) / contentH);
-        
-        const contentCenterX = minX + contentW / 2;
-        const contentCenterY = minY + contentH / 2;
-        
-        const defaultOffsetX = (targetW / 2) - (contentCenterX * idealScale);
-        const defaultOffsetY = (targetH / 2) - (contentCenterY * idealScale) + (targetH * 0.1);
+  const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
 
-        setScale(idealScale);
-        setOffsetX(defaultOffsetX);
-        setOffsetY(defaultOffsetY);
-        resolve(null);
-      };
-    });
-  };
+  const handleExport = async (format: "jpg" | "psd") => {
+    if (!transparentBlob || !croppedAreaPixels) return;
+    setIsExporting(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", transparentBlob, file?.name || "image.png");
+      formData.append("crop", JSON.stringify(croppedAreaPixels));
+      formData.append("bgColor", bgColor);
+      formData.append("format", format);
 
-  // Real-time canvas generation whenever parameters change
-  useEffect(() => {
-    if (!transparentUrl) return;
-    
-    const generateFinal = async () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 413;
-      canvas.height = 531;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      const res = await fetch("/api/export-passport", {
+        method: "POST",
+        body: formData,
+      });
 
-      const hex = bgColor === "white" ? "#FFFFFF" : bgColor === "gray" ? "#E5E7EB" : "#BAE6FD";
-      ctx.fillStyle = hex;
-      ctx.fillRect(0, 0, 413, 531);
+      if (!res.ok) throw new Error("Failed to export.");
 
-      const img = new Image();
-      img.src = transparentUrl;
-      img.onload = () => {
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, offsetX, offsetY, img.width * scale, img.height * scale);
-
-        setResultSingleUrl(canvas.toDataURL("image/jpeg", 1.0));
-      };
-    };
-
-    generateFinal();
-  }, [transparentUrl, scale, offsetX, offsetY, bgColor, showAdjustments]);
-
-  const downloadPrintSheet = async () => {
-    if (!resultSingleUrl) return;
-    const sheetW = 1200; 
-    const sheetH = 1800;
-    
-    const bgCanvas = document.createElement("canvas");
-    bgCanvas.width = sheetW;
-    bgCanvas.height = sheetH;
-    const bgCtx = bgCanvas.getContext("2d");
-    if (!bgCtx) return;
-    
-    bgCtx.fillStyle = "#FFFFFF";
-    bgCtx.fillRect(0, 0, sheetW, sheetH);
-
-    await new Promise((resolve) => {
-      const passportImg = new Image();
-      passportImg.src = resultSingleUrl; 
-      passportImg.onload = () => {
-        const spacingX = 100;
-        const spacingY = 100;
-        const startX = (sheetW - (413 * 2 + spacingX)) / 2;
-        const startY = 150;
-
-        const createPhotoCanvas = () => {
-          const c = document.createElement("canvas");
-          c.width = 413;
-          c.height = 531;
-          const ctx = c.getContext("2d");
-          ctx?.drawImage(passportImg, 0, 0, 413, 531);
-          return c;
-        };
-
-        const psdData = {
-          width: sheetW,
-          height: sheetH,
-          children: [
-            {
-              name: "Background",
-              canvas: bgCanvas,
-            },
-            {
-              name: "Photo 1",
-              canvas: createPhotoCanvas(),
-              left: startX,
-              top: startY,
-            },
-            {
-              name: "Photo 2",
-              canvas: createPhotoCanvas(),
-              left: startX + 413 + spacingX,
-              top: startY,
-            },
-            {
-              name: "Photo 3",
-              canvas: createPhotoCanvas(),
-              left: startX,
-              top: startY + 531 + spacingY,
-            },
-            {
-              name: "Photo 4",
-              canvas: createPhotoCanvas(),
-              left: startX + 413 + spacingX,
-              top: startY + 531 + spacingY,
-            }
-          ]
-        };
-
-        try {
-          const buffer = writePsd(psdData as any);
-          const blob = new Blob([buffer], { type: "application/octet-stream" });
-          const a = document.createElement("a");
-          a.href = URL.createObjectURL(blob);
-          a.download = `4x6-print-sheet-${Date.now()}.psd`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        } catch (error) {
-          console.error("Failed to generate PSD", error);
-        }
-
-        resolve(null);
-      };
-    });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = format === "jpg" ? `passport-single-${Date.now()}.jpg` : `4x6-print-sheet-${Date.now()}.psd`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error(error);
+      setErrorText("Failed to generate export file.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const reset = () => {
     setFile(null);
     setTransparentUrl(null);
-    setResultSingleUrl(null);
+    setTransparentBlob(null);
     setErrorText(null);
-    setShowAdjustments(false);
   };
 
   return (
@@ -267,24 +131,31 @@ export default function PassportPage() {
             </div>
           )}
 
-          {transparentUrl && resultSingleUrl && (
+          {transparentUrl && (
             <div className="flex flex-col items-center text-center space-y-8 py-8 animate-in zoom-in-95 duration-500 w-full">
               
               <div className="grid md:grid-cols-[auto_1fr] gap-8 md:gap-16 items-start justify-center max-w-3xl border border-border bg-card/30 p-8 rounded-3xl backdrop-blur-xl w-full">
                 
-                {/* Result Image */}
-                <div className="relative mx-auto shrink-0 transition-transform duration-300 w-[275px] h-[354px]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={resultSingleUrl} alt="Result" className="absolute inset-0 h-full w-full object-cover rounded-xl drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-border transition-all" />
-                  
-                  {showAdjustments && (
-                    <div className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden">
-                       <div className="absolute top-[15%] left-0 w-full border-t-2 border-dashed border-red-500/80" />
-                       <div className="absolute top-[85%] left-0 w-full border-t-2 border-dashed border-red-500/80" />
-                    </div>
-                  )}
+                {/* Result Image cropping area */}
+                <div className="relative mx-auto shrink-0 transition-transform duration-300 w-[275px] h-[354px] rounded-xl overflow-hidden border border-border bg-[#e5e7eb]">
+                  <Cropper
+                    image={transparentUrl}
+                    crop={crop}
+                    zoom={zoom}
+                    aspect={35 / 45}
+                    onCropChange={setCrop}
+                    onZoomChange={setZoom}
+                    onCropComplete={onCropComplete}
+                    cropShape="rect"
+                    showGrid={false}
+                    style={{
+                      containerStyle: {
+                        backgroundColor: bgColor === "white" ? "#FFFFFF" : bgColor === "gray" ? "#E5E7EB" : "#BAE6FD"
+                      }
+                    }}
+                  />
 
-                  <div className="absolute -bottom-3 -right-3 bg-emerald-500 text-black px-3 py-1 rounded-full text-xs font-bold shadow-xl border border-emerald-400 rotate-6 z-10">Auto-Aligned 45x35mm</div>
+                  <div className="absolute -bottom-3 -right-3 bg-emerald-500 text-black px-3 py-1 rounded-full text-xs font-bold shadow-xl border border-emerald-400 rotate-6 z-10 pointer-events-none">Auto-Aligned 45x35mm</div>
                 </div>
 
                 {/* Right Side Controls */}
@@ -311,49 +182,19 @@ export default function PassportPage() {
                     </div>
                   </div>
 
-                  {/* Manual Adjustment Toggle */}
-                  <div className="pt-2 border-t border-border/50">
-                    <Button variant="outline" onClick={() => setShowAdjustments(!showAdjustments)} className="w-full justify-between rounded-xl h-12">
-                      <span className="flex items-center gap-2"><SlidersHorizontal className="w-4 h-4"/> Fine-Tune Alignment</span>
-                      <span className="text-xs text-muted-foreground">{showAdjustments ? "Hide" : "Show"}</span>
-                    </Button>
-
-                    {showAdjustments && (
-                      <div className="space-y-4 mt-6 animate-in slide-in-from-top-2 fade-in">
-                         <div className="space-y-1">
-                            <div className="flex justify-between text-xs text-muted-foreground tracking-wide font-medium"><span>Zoom</span></div>
-                            <input type="range" min="0.1" max="3" step="0.05" value={scale} onChange={e => setScale(parseFloat(e.target.value))} className="w-full accent-primary h-2 bg-muted rounded-lg appearance-none cursor-pointer" />
-                         </div>
-                         <div className="space-y-1">
-                            <div className="flex justify-between text-xs text-muted-foreground tracking-wide font-medium"><span>Move Left / Right</span></div>
-                            <input type="range" min="-300" max="300" step="2" value={offsetX} onChange={e => setOffsetX(parseFloat(e.target.value))} className="w-full accent-primary h-2 bg-muted rounded-lg appearance-none cursor-pointer" />
-                         </div>
-                         <div className="space-y-1">
-                            <div className="flex justify-between text-xs text-muted-foreground tracking-wide font-medium"><span>Move Up / Down</span></div>
-                            <input type="range" min="-300" max="300" step="2" value={offsetY} onChange={e => setOffsetY(parseFloat(e.target.value))} className="w-full accent-primary h-2 bg-muted rounded-lg appearance-none cursor-pointer" />
-                         </div>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Main Actions */}
                   <div className="flex flex-col gap-3 mt-auto">
                     <div className="flex gap-3">
-                       <Button size="lg" onClick={() => {
-                              const a = document.createElement("a");
-                              a.href = resultSingleUrl;
-                              a.download = `passport-single-${Date.now()}.jpg`;
-                              a.click();
-                           }} className="flex-1 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 h-14 shadow-md transition-transform hover:scale-[1.02]">
-                          <Download className="mr-2 h-4 w-4" /> Save Standard JPG
+                       <Button size="lg" onClick={() => handleExport("jpg")} disabled={isExporting} className="flex-1 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 h-14 shadow-md transition-transform hover:scale-[1.02]">
+                          <Download className="mr-2 h-4 w-4" /> {isExporting ? "Processing..." : "Save Standard JPG"}
                        </Button>
 
-                       <Button size="lg" onClick={downloadPrintSheet} className="flex-1 rounded-xl bg-[#26a8ed] text-white hover:bg-[#1f93d1] font-bold h-14 shadow-lg transition-transform hover:scale-[1.02]">
-                          <Grid3X3 className="mr-2 h-4 w-4" /> Save PSD File (Editable)
+                       <Button size="lg" onClick={() => handleExport("psd")} disabled={isExporting} className="flex-1 rounded-xl bg-[#26a8ed] text-white hover:bg-[#1f93d1] font-bold h-14 shadow-lg transition-transform hover:scale-[1.02]">
+                          <Grid3X3 className="mr-2 h-4 w-4" /> {isExporting ? "Processing..." : "Save PSD Sheet"}
                        </Button>
                     </div>
                     
-                    <Button variant="ghost" size="sm" onClick={reset} className="w-full rounded-xl text-muted-foreground hover:text-foreground mt-2">
+                    <Button variant="ghost" size="sm" onClick={reset} disabled={isExporting} className="w-full rounded-xl text-muted-foreground hover:text-foreground mt-2">
                        <RefreshCw className="mr-2 h-3 w-3" /> Process New Photo
                     </Button>
                   </div>

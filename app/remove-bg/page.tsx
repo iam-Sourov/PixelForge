@@ -24,14 +24,10 @@ export default function RemoveBgPage() {
     setIsProcessing(true);
     
     try {
-      const formData = new FormData(); 
-      formData.append("image", file);
-      const res = await fetch("/api/remove-bg", { method: "POST", body: formData });
-      
-      if (!res.ok) throw new Error("Server error occurred");
-      
-      const data = await res.json();
-      setResultUrl(data.url);
+      const { removeBackground } = await import("@imgly/background-removal");
+      const blob = await removeBackground(file);
+      const url = URL.createObjectURL(blob);
+      setResultUrl(url);
     } catch (error: any) {
       setErrorText("Failed to extract background. Please try again.");
     } finally {
