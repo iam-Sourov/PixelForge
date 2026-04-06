@@ -10,7 +10,7 @@ import { useTheme } from "next-themes";
 
 
 export default function EnhancePage() {
-  const [file, setFile] = useState<File | null>(null);
+
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -22,7 +22,6 @@ export default function EnhancePage() {
 
   // Params
   const [denoise, setDenoise] = useState<number>(100);
-  const [faceEnhance, setFaceEnhance] = useState<boolean>(true);
 
   const handleUpload = (selectedFile: File) => {
     if (selectedFile.size < 10000) {
@@ -32,7 +31,7 @@ export default function EnhancePage() {
     if (originalUrl) URL.revokeObjectURL(originalUrl);
     if (resultUrl && resultUrl.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
 
-    setFile(selectedFile);
+
     setOriginalUrl(URL.createObjectURL(selectedFile));
     setResultUrl(null);
     setErrorText(null);
@@ -40,7 +39,7 @@ export default function EnhancePage() {
 
   const generateEnhancedCanvas = async (sourceUrl: string, denoiseVal: number) => {
     try {
-      let currentHtmlImage = new Image();
+      const currentHtmlImage = new Image();
       currentHtmlImage.src = sourceUrl;
       await new Promise((resolve, reject) => { 
         currentHtmlImage.onload = resolve; 
@@ -111,8 +110,8 @@ export default function EnhancePage() {
       } else {
         throw new Error("Local canvas engine failed to process the image.");
       }
-    } catch (e: any) {
-      setErrorText(e.message || "Enhancement failed.");
+    } catch (e: unknown) {
+      setErrorText(e instanceof Error ? e.message : "Enhancement failed.");
     } finally {
       setIsProcessing(false);
     }
@@ -121,7 +120,7 @@ export default function EnhancePage() {
   const clearImage = () => {
     if (originalUrl) URL.revokeObjectURL(originalUrl);
     if (resultUrl && resultUrl.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
-    setFile(null);
+
     setOriginalUrl(null);
     setResultUrl(null);
     setErrorText(null);

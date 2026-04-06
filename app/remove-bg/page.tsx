@@ -28,7 +28,7 @@ export default function RemoveBgPage() {
       const blob = await removeBackground(file);
       const url = URL.createObjectURL(blob);
       setResultUrl(url);
-    } catch (error: any) {
+    } catch {
       setErrorText("Failed to extract background. Please try again.");
     } finally {
       setIsProcessing(false);
@@ -92,7 +92,7 @@ export default function RemoveBgPage() {
                 </div>
               )}
 
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {/* Custom render bypassing NextJS Image Optimization limits locally */}
               {resultUrl ? (
                 <img src={resultUrl} alt="Result" className="max-h-[500px] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in duration-700 dark:drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)]" />
               ) : (

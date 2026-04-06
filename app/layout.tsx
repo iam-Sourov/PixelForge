@@ -1,4 +1,5 @@
-import { Geist, Geist_Mono, Inter } from "next/font/google"
+import type { Metadata } from "next";
+import { Geist_Mono, Inter } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -12,6 +13,12 @@ const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 })
+
+export const metadata: Metadata = {
+  title: "PixelForge | AI Studio Tools",
+  description: "Local machine learning toolkit for image enhancement, subject extraction, and passport alignment.",
+  keywords: ["Image Enhancer", "Background Removal", "Passport Crop", "AI Agent"],
+};
 
 export default function RootLayout({
   children,

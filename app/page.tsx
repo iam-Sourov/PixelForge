@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Spotlight } from "@/components/ui/spotlight";
-import { BeforeAfterSlider } from "@/components/shared/BeforeAfterSlider";
+
 import { Sparkles, Users, Image as ImageIcon, Wand2, Crop, ArrowRight } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -12,7 +12,7 @@ export default function Home() {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => { setMounted(true); }, []);
 
   return (
     <div className="flex flex-col items-center w-full overflow-hidden">
@@ -35,12 +35,9 @@ export default function Home() {
           <div className="flex flex-col gap-4 sm:flex-row">
             <Button size="lg" className="group rounded-full px-8 text-base shadow-[0_0_20px_rgba(124,58,237,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)]">
                <Link href="/enhance" className="flex items-center">
-                  Try for free
+                  Try NOW
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-full px-8 text-base transition-transform hover:scale-[1.02]">
-               <Link href="#showcase">View Showcase</Link>
             </Button>
           </div>
         </div>
@@ -51,7 +48,7 @@ export default function Home() {
         <div className="container mx-auto flex flex-col items-center justify-center gap-6 md:flex-row md:gap-12 lg:gap-24 opacity-60 grayscale filter">
           <div className="flex items-center gap-3">
             <Users className="h-6 w-6 text-foreground" />
-            <span className="font-heading text-xl font-bold tracking-tight text-foreground">10,000+ Processed</span>
+            <span className="font-heading text-xl font-bold tracking-tight text-foreground">Custom Users</span>
           </div>
           <div className="flex items-center gap-3">
             <ImageIcon className="h-6 w-6 text-foreground" />
@@ -133,31 +130,6 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Before/After Showcase */}
-      <section id="showcase" className="relative w-full overflow-hidden border-t border-border py-24 md:py-32">
-        <div className="absolute inset-0 bg-primary/5 [mask-image:radial-gradient(ellipse_at_center,black_10%,transparent_70%)]" />
-        <div className="container relative z-10 mx-auto px-4 text-center md:px-8">
-          <h2 className="mb-6 font-heading text-4xl font-bold tracking-tighter text-foreground md:text-5xl">
-            See the difference.
-          </h2>
-          <p className="mx-auto mb-16 max-w-2xl text-lg text-muted-foreground font-light">
-            Interactive visual proof of our proprietary upscaling and enhancement algorithms.
-          </p>
-          
-          <div className="mx-auto max-w-5xl rounded-[2rem] border border-border bg-card/50 p-2 backdrop-blur-xl shadow-2xl">
-            {/* The Before/After Slider Component */}
-            <BeforeAfterSlider 
-              beforeImage="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=60&w=1400&auto=format&fit=crop&blur=100" 
-              afterImage="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=100&w=1400&auto=format&fit=crop"
-              beforeLabel="Original (Low Res)"
-              afterLabel="Enhanced (4x AI)"
-              className="h-[500px] w-full rounded-[1.5rem]"
-            />
-          </div>
-          
         </div>
       </section>
     </div>

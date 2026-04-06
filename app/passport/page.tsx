@@ -1,20 +1,20 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { UploadZone } from "@/components/shared/UploadZone";
 import { Button } from "@/components/ui/button";
 import { Download, RefreshCw, Sparkles, Check, Grid3X3 } from "lucide-react";
 import { Spotlight } from "@/components/ui/spotlight";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
-import Cropper from "react-easy-crop";
+import Cropper, { Area } from "react-easy-crop";
 
 export default function PassportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isProcessingBg, setIsProcessingBg] = useState(false);
   const [transparentUrl, setTransparentUrl] = useState<string | null>(null);
   const [transparentBlob, setTransparentBlob] = useState<Blob | null>(null);
-  
+
   const [bgColor, setBgColor] = useState<"white" | "gray" | "blue">("white");
   const [errorText, setErrorText] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
@@ -38,18 +38,18 @@ export default function PassportPage() {
     try {
       const { removeBackground } = await import("@imgly/background-removal");
       const blob = await removeBackground(selectedFile);
-      
+
       setTransparentBlob(blob);
       const tUrl = URL.createObjectURL(blob);
       setTransparentUrl(tUrl);
-    } catch (e: any) {
-      setErrorText(e.message || "Failed to process image.");
+    } catch (e: unknown) {
+      setErrorText(e instanceof Error ? e.message : "Failed to process image.");
     } finally {
       setIsProcessingBg(false);
     }
   };
 
-  const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
+  const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
@@ -96,17 +96,17 @@ export default function PassportPage() {
   return (
     <div className="relative min-h-[calc(100vh-80px)] w-full overflow-hidden flex flex-col items-center justify-center p-4">
       {mounted && <Spotlight className="-top-40 right-0 md:right-60 md:-top-20" fill={resolvedTheme === "dark" ? "white" : "black"} />}
-      
+
       <div className="z-10 w-full max-w-4xl flex flex-col items-center gap-8">
-        
+
         {!transparentUrl && !isProcessingBg && (
           <div className="text-center space-y-4 mb-8">
-             <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground to-muted-foreground">
-               Instant Passport
-             </h1>
-             <p className="text-muted-foreground md:text-lg max-w-xl mx-auto">
-               Drop a photo. Subject auto-detection and perfect 45x35mm cropping done instantly.
-             </p>
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-foreground to-muted-foreground">
+              Instant Passport
+            </h1>
+            <p className="text-muted-foreground md:text-lg max-w-xl mx-auto">
+              Drop a photo. Subject auto-detection and perfect 45x35mm cropping done instantly.
+            </p>
           </div>
         )}
 
@@ -125,17 +125,17 @@ export default function PassportPage() {
 
           {isProcessingBg && (
             <div className="rounded-3xl border border-border bg-card/50 p-8 backdrop-blur-xl shadow-2xl flex flex-col items-center justify-center min-h-[400px] max-w-2xl mx-auto">
-               <Sparkles className="h-10 w-10 text-primary animate-pulse mb-6" />
-               <h3 className="text-xl font-bold text-foreground">Auto-Aligning Subject</h3>
-               <p className="text-muted-foreground mt-2">Running background removal and scanning facial bounds...</p>
+              <Sparkles className="h-10 w-10 text-primary animate-pulse mb-6" />
+              <h3 className="text-xl font-bold text-foreground">Auto-Aligning Subject</h3>
+              <p className="text-muted-foreground mt-2">Running background removal and scanning facial bounds...</p>
             </div>
           )}
 
           {transparentUrl && (
             <div className="flex flex-col items-center text-center space-y-8 py-8 animate-in zoom-in-95 duration-500 w-full">
-              
+
               <div className="grid md:grid-cols-[auto_1fr] gap-8 md:gap-16 items-start justify-center max-w-3xl border border-border bg-card/30 p-8 rounded-3xl backdrop-blur-xl w-full">
-                
+
                 {/* Result Image cropping area */}
                 <div className="relative mx-auto shrink-0 transition-transform duration-300 w-[275px] h-[354px] rounded-xl overflow-hidden border border-border bg-[#e5e7eb]">
                   <Cropper
@@ -154,30 +154,28 @@ export default function PassportPage() {
                       }
                     }}
                   />
-
-                  <div className="absolute -bottom-3 -right-3 bg-emerald-500 text-black px-3 py-1 rounded-full text-xs font-bold shadow-xl border border-emerald-400 rotate-6 z-10 pointer-events-none">Auto-Aligned 45x35mm</div>
                 </div>
 
                 {/* Right Side Controls */}
                 <div className="flex flex-col gap-6 text-left w-full h-full justify-center">
-                  
+
                   {/* Background Toggle */}
                   <div>
                     <h3 className="text-xs font-bold text-foreground mb-3 tracking-widest uppercase">Select Background</h3>
                     <div className="flex gap-2">
                       {(["white", "gray", "blue"] as const).map((c) => (
-                         <button 
-                           key={c}
-                           onClick={() => setBgColor(c)}
-                           className={cn(
-                             "relative flex-1 h-12 rounded-lg flex items-center justify-center transition-all",
-                             c === "white" ? "bg-white text-black ring-1 ring-border" : c === "gray" ? "bg-[#e5e7eb] text-black ring-1 ring-border" : "bg-[#bae6fd] text-black ring-1 ring-border",
-                             bgColor === c ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105" : "hover:scale-105"
-                           )}
-                         >
-                            {bgColor === c && <Check className="absolute top-1 right-1 w-3 h-3 opacity-50" />}
-                            <span className="text-xs font-bold capitalize">{c}</span>
-                         </button>
+                        <button
+                          key={c}
+                          onClick={() => setBgColor(c)}
+                          className={cn(
+                            "relative flex-1 h-12 rounded-lg flex items-center justify-center transition-all",
+                            c === "white" ? "bg-white text-black ring-1 ring-border" : c === "gray" ? "bg-[#e5e7eb] text-black ring-1 ring-border" : "bg-[#bae6fd] text-black ring-1 ring-border",
+                            bgColor === c ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105" : "hover:scale-105"
+                          )}
+                        >
+                          {bgColor === c && <Check className="absolute top-1 right-1 w-3 h-3 opacity-50" />}
+                          <span className="text-xs font-bold capitalize">{c}</span>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -185,17 +183,17 @@ export default function PassportPage() {
                   {/* Main Actions */}
                   <div className="flex flex-col gap-3 mt-auto">
                     <div className="flex gap-3">
-                       <Button size="lg" onClick={() => handleExport("jpg")} disabled={isExporting} className="flex-1 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 h-14 shadow-md transition-transform hover:scale-[1.02]">
-                          <Download className="mr-2 h-4 w-4" /> {isExporting ? "Processing..." : "Save Standard JPG"}
-                       </Button>
+                      <Button size="lg" onClick={() => handleExport("jpg")} disabled={isExporting} className="flex-1 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 h-14 shadow-md transition-transform hover:scale-[1.02]">
+                        <Download className="mr-2 h-4 w-4" /> {isExporting ? "Processing..." : "Save Standard JPG"}
+                      </Button>
 
-                       <Button size="lg" onClick={() => handleExport("psd")} disabled={isExporting} className="flex-1 rounded-xl bg-[#26a8ed] text-white hover:bg-[#1f93d1] font-bold h-14 shadow-lg transition-transform hover:scale-[1.02]">
-                          <Grid3X3 className="mr-2 h-4 w-4" /> {isExporting ? "Processing..." : "Save PSD Sheet"}
-                       </Button>
+                      <Button size="lg" onClick={() => handleExport("psd")} disabled={isExporting} className="flex-1 rounded-xl bg-[#26a8ed] text-white hover:bg-[#1f93d1] font-bold h-14 shadow-lg transition-transform hover:scale-[1.02]">
+                        <Grid3X3 className="mr-2 h-4 w-4" /> {isExporting ? "Processing..." : "Save PSD Sheet"}
+                      </Button>
                     </div>
-                    
+
                     <Button variant="ghost" size="sm" onClick={reset} disabled={isExporting} className="w-full rounded-xl text-muted-foreground hover:text-foreground mt-2">
-                       <RefreshCw className="mr-2 h-3 w-3" /> Process New Photo
+                      <RefreshCw className="mr-2 h-3 w-3" /> Process New Photo
                     </Button>
                   </div>
 

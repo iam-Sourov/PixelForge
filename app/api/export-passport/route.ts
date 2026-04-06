@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       .toBuffer();
 
     if (format === "jpg") {
-      return new NextResponse(singleBuff as any, {
+      return new NextResponse(singleBuff as unknown as BodyInit, {
         status: 200,
         headers: {
           "Content-Type": "image/jpeg",
@@ -54,54 +54,49 @@ export async function POST(req: NextRequest) {
       const layerData = new Uint8ClampedArray(data);
       const photoImageData = { width: info.width, height: info.height, data: layerData };
 
-      const sheetW = 1200;
-      const sheetH = 1800;
+      const sheetW = 1800; // 6 inches at 300dpi (Landscape)
+      const sheetH = 1200; // 4 inches at 300dpi
       
       const bgBuffer = Buffer.alloc(sheetW * sheetH * 4, 255);
       const bgImageData = { width: sheetW, height: sheetH, data: new Uint8ClampedArray(bgBuffer) };
 
-      const spacingX = 100;
-      const spacingY = 100;
-      const startX = Math.round((sheetW - (413 * 2 + spacingX)) / 2);
-      const startY = 150;
+      const photoW = 413;
+      const photoH = 531;
+      const cols = 4; // 4 images in a row
+      const rows = 2; // in two columns/lines
+
+      const spacingX = 30;
+      const spacingY = 50;
+      const startX = Math.round((sheetW - (cols * photoW + (cols - 1) * spacingX)) / 2);
+      const startY = Math.round((sheetH - (rows * photoH + (rows - 1) * spacingY)) / 2);
+
+      const children: Array<Record<string, unknown>> = [
+        {
+          name: "Background",
+          imageData: bgImageData,
+        }
+      ];
+
+      // Generate the 8 images layout (4 in a row, 2 rows)
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          children.push({
+            name: `Passport Photo ${r + 1}-${c + 1}`,
+            left: startX + c * (photoW + spacingX),
+            top: startY + r * (photoH + spacingY),
+            imageData: photoImageData,
+          });
+        }
+      }
 
       const psdData = {
         width: sheetW,
         height: sheetH,
-        children: [
-          {
-            name: "Background",
-            imageData: bgImageData,
-          },
-          {
-            name: "Photo 1",
-            left: startX,
-            top: startY,
-            imageData: photoImageData,
-          },
-          {
-            name: "Photo 2",
-            left: startX + 413 + spacingX,
-            top: startY,
-            imageData: photoImageData,
-          },
-          {
-            name: "Photo 3",
-            left: startX,
-            top: startY + 531 + spacingY,
-            imageData: photoImageData,
-          },
-          {
-            name: "Photo 4",
-            left: startX + 413 + spacingX,
-            top: startY + 531 + spacingY,
-            imageData: photoImageData,
-          }
-        ]
+        children: children
       };
 
-      const psdBuffer = writePsd(psdData as any);
-      return new NextResponse(Buffer.from(psdBuffer) as any, {
+      const psdBuffer = writePsd(psdData as import('ag-psd').Psd);
+      return new NextResponse(Buffer.from(psdBuffer) as unknown as BodyInit, {
         status: 200,
         headers: {
           "Content-Type": "application/octet-stream",
@@ -111,7 +106,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Invalid format" }, { status: 400 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Export Error:", error);
     return NextResponse.json({ error: "Failed to process image." }, { status: 500 });
   }
