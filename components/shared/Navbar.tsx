@@ -28,7 +28,7 @@ export function Navbar() {
         </Link>
         
         {/* Desktop Navigation */}
-        <nav className="hidden items-center p-1 md:flex rounded-full border border-border/50 bg-muted/20 backdrop-blur-md">
+        <nav className="hidden w-fit items-center p-1 md:flex rounded-full border border-border/50 bg-muted/20 backdrop-blur-md">
           {links.map((link) => {
             const isActive = pathname === link.href;
             return (
@@ -36,8 +36,8 @@ export function Navbar() {
                 key={link.href} 
                 href={link.href} 
                 className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300", 
-                  isActive ? "bg-background text-foreground shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  " px-4 py-2 rounded-full text-sm font-medium transition-all duration-300", 
+                  isActive ? "bg-primary text-white shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
                 {link.label}
