@@ -58,15 +58,9 @@ export default function EnhancePage() {
         outCtx.imageSmoothingEnabled = true;
         outCtx.imageSmoothingQuality = "high";
         
-        // Apply heavy sharpening matrix mapping for clarity focus!
-        let filterStr = denoiseVal > 50 ? "url(#sharpen-high) " : "url(#sharpen-med) ";
-
-        // Color Grading / Clarity - Toned down to prevent artifact clipping
-        if (denoiseVal > 0) {
-           filterStr += `contrast(${100 + (denoiseVal / 100) * 5}%) saturate(${100 + (denoiseVal / 100) * 10}%) brightness(101%)`; 
-        }
-
-        outCtx.filter = filterStr.trim();
+        // Professional production-ready SVG filtering mapping
+        // Handles: Unsharp mask (micro-contrast), Lighting (dynamic range), and Color (natural vibrancy)
+        outCtx.filter = denoiseVal > 50 ? "url(#enhance-high)" : "url(#enhance-med)";
         outCtx.drawImage(currentHtmlImage, 0, 0, targetWidth, targetHeight);
         
         return new Promise<string | null>((resolve) => {
@@ -130,14 +124,37 @@ export default function EnhancePage() {
     <div className="relative min-h-[calc(100vh-80px)] w-full overflow-hidden flex flex-col items-center justify-center p-4">
       {mounted && <Spotlight className="-top-40 left-0 md:left-20 md:-top-20" fill={resolvedTheme === "dark" ? "white" : "black"} />}
       
-      {/* Hardware Accelerated SVG Filters for native GPU Sharpening */}
+      {/* Hardware Accelerated SVG Filters for Professional Native GPU Image Enhancement */}
       <svg width="0" height="0" className="opacity-0 fixed pointer-events-none" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <filter id="sharpen-high">
-            <feConvolveMatrix order="3 3" preserveAlpha="true" kernelMatrix="0 -0.5 0 -0.5 3 -0.5 0 -0.5 0" />
+          <filter id="enhance-high" x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
+            {/* 1. Refinement & Sharpness: High-frequency Unsharp Mask for micro-contrast 
+                 (hair strands, eyelashes, pores, sweater) */}
+            <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="arithmetic" k1="0" k2="1.45" k3="-0.45" k4="0" result="unsharp" />
+            
+            {/* 2. Contrast & Lighting: Gentle lift in dynamic range, softer lighting for shadows */}
+            <feComponentTransfer in="unsharp" result="lighting">
+              <feFuncR type="gamma" amplitude="1" exponent="0.93" offset="0" />
+              <feFuncG type="gamma" amplitude="1" exponent="0.93" offset="0" />
+              <feFuncB type="gamma" amplitude="1" exponent="0.93" offset="0" />
+            </feComponentTransfer>
+            
+            {/* 3. Color: Natural boost in saturation (vibrancy for green sweater and skin tones) */}
+            <feColorMatrix in="lighting" type="saturate" values="1.2" result="color" />
           </filter>
-          <filter id="sharpen-med">
-            <feConvolveMatrix order="3 3" preserveAlpha="true" kernelMatrix="0 -0.2 0 -0.2 1.8 -0.2 0 -0.2 0" />
+
+          <filter id="enhance-med" x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="0.8" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="arithmetic" k1="0" k2="1.25" k3="-0.25" k4="0" result="unsharp" />
+            
+            <feComponentTransfer in="unsharp" result="lighting">
+              <feFuncR type="gamma" amplitude="1" exponent="0.96" offset="0" />
+              <feFuncG type="gamma" amplitude="1" exponent="0.96" offset="0" />
+              <feFuncB type="gamma" amplitude="1" exponent="0.96" offset="0" />
+            </feComponentTransfer>
+            
+            <feColorMatrix in="lighting" type="saturate" values="1.1" result="color" />
           </filter>
         </defs>
       </svg>

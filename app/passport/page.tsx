@@ -53,7 +53,7 @@ export default function PassportPage() {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  const handleExport = async (format: "jpg" | "psd") => {
+  const handleExport = async (format: "jpg" | "psd", layout = "4x1") => {
     if (!transparentBlob || !croppedAreaPixels) return;
     setIsExporting(true);
     try {
@@ -62,6 +62,7 @@ export default function PassportPage() {
       formData.append("crop", JSON.stringify(croppedAreaPixels));
       formData.append("bgColor", bgColor);
       formData.append("format", format);
+      if (format === "psd") formData.append("layout", layout);
 
       const res = await fetch("/api/export-passport", {
         method: "POST",
@@ -182,13 +183,17 @@ export default function PassportPage() {
 
                   {/* Main Actions */}
                   <div className="flex flex-col gap-3 mt-auto">
+                    <Button size="lg" onClick={() => handleExport("jpg")} disabled={isExporting} className="w-full rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 h-14 shadow-md transition-transform hover:scale-[1.02]">
+                      <Download className="mr-2 h-4 w-4" /> {isExporting ? "Processing..." : "Save Standard JPG"}
+                    </Button>
+
                     <div className="flex gap-3">
-                      <Button size="lg" onClick={() => handleExport("jpg")} disabled={isExporting} className="flex-1 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 h-14 shadow-md transition-transform hover:scale-[1.02]">
-                        <Download className="mr-2 h-4 w-4" /> {isExporting ? "Processing..." : "Save Standard JPG"}
+                      <Button size="lg" onClick={() => handleExport("psd", "4x1")} disabled={isExporting} className="flex-1 rounded-xl bg-[#26a8ed] text-white hover:bg-[#1f93d1] font-bold h-14 shadow-lg transition-transform hover:scale-[1.02] px-2 text-sm">
+                        <Grid3X3 className="mr-2 h-4 w-4" /> {isExporting ? "Wait..." : "PSD (1 Row)"}
                       </Button>
 
-                      <Button size="lg" onClick={() => handleExport("psd")} disabled={isExporting} className="flex-1 rounded-xl bg-[#26a8ed] text-white hover:bg-[#1f93d1] font-bold h-14 shadow-lg transition-transform hover:scale-[1.02]">
-                        <Grid3X3 className="mr-2 h-4 w-4" /> {isExporting ? "Processing..." : "Save PSD Sheet"}
+                      <Button size="lg" onClick={() => handleExport("psd", "4x2")} disabled={isExporting} className="flex-1 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 font-bold h-14 shadow-lg transition-transform hover:scale-[1.02] px-2 text-sm">
+                        <Grid3X3 className="mr-2 h-4 w-4" /> {isExporting ? "Wait..." : "PSD (4x2)"}
                       </Button>
                     </div>
 

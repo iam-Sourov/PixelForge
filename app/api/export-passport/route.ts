@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
     const cropStr = formData.get("crop") as string;
     const bgColor = formData.get("bgColor") as string;
     const format = formData.get("format") as string; // 'jpg' or 'psd'
+    const layout = formData.get("layout") as string; // '4x1' or '4x2'
 
     if (!image || !cropStr) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
       const photoW = 413;
       const photoH = 531;
       const cols = 4; // 4 images in a row
-      const rows = 2; // in two columns/lines
+      const rows = layout === "4x2" ? 2 : 1; 
 
       const spacingX = 30;
       const spacingY = 50;
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
         }
       ];
 
-      // Generate the 8 images layout (4 in a row, 2 rows)
+      // Generate the images layout based on rows x cols
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           children.push({
