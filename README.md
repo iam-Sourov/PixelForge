@@ -23,11 +23,13 @@ Generate ready-to-print passport matrices within seconds.
 - **Export standard JPGs** or deploy physical print sheets!
 - Backend compilation routing directly interfaces with `sharp` and `ag-psd` to render a fully composited **4x6" Landscape PSD Print Sheet** mapped with 8 distinct photos on an array payload for professional printing.
 
-### 3. Hardware-Accelerated Local Enhancer
-Sharpen and re-grade images dynamically on the browser.
-- We abandoned laggy, resource-heavy upscaler packages in favor of pure **SVG Convolution Matrix pixel engineering** (`feConvolveMatrix`).
-- Achieve zero-latency GPU-accelerated clarity and color grading directly inside standard canvas pipelines!
-- One-click immediate download pipelines.
+### 3. OpenCV Hardware-Accelerated Enhancer
+Professional-grade image restoration and re-grading dynamically in the browser.
+- Utilizing **OpenCV.js (WASM)** for industry-standard image processing.
+- **CLAHE Integration**: High-fidelity Contrast-Limited Adaptive Histogram Equalization for balanced exposure.
+- **Lab Space Corrections**: Perform luminance and saturation adjustments in the Lab color space to preserve chromatic integrity.
+- **Blur Detection Core**: Laplacian-based focus scoring and thresholding to assist with image selection.
+- One-click immediate export of studio-quality masters.
 
 ---
 
@@ -39,7 +41,10 @@ Sharpen and re-grade images dynamically on the browser.
   - `sharp` - High-performance Node.js image processing.
   - `ag-psd` - Headless Photoshop Document (PSD) parser and wrapper.
   - `@imgly` - Local WASM Background Segmenting.
-  - Native Canvas & SVG Convolutions Engine.
+  - `Python 3.10+` - Backend compute for heavy vision tasks.
+  - `opencv-python` - Professional-grade image processing backend.
+  - `NumPy` - High-performance numerical compute for image matrices.
+  - Native Canvas & WebGL pipelines.
 - **UI Tooling**: [Lucide React](https://lucide.dev/), `react-easy-crop`, `framer-motion`.
 
 ---
