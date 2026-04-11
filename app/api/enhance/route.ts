@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     pythonProcess.stdin.write(image.split(",")[1] || image);
     pythonProcess.stdin.end();
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       pythonProcess.stdout.on("data", (data) => {
         result += data.toString();
       });
