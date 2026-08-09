@@ -5,6 +5,7 @@
 
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cv: any;
   }
 }
@@ -22,8 +23,10 @@ export interface PortraitEnhanceOptions {
  * Handles memory management and core OpenCV logic.
  */
 export class PortraitEnhancer {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private cv: any;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(cv: any) {
     this.cv = cv;
   }
@@ -31,6 +34,7 @@ export class PortraitEnhancer {
   /**
    * Helper: Converts Canvas or Image to Mat
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public static matFromSource(source: HTMLCanvasElement | HTMLImageElement): any {
     return window.cv.imread(source);
   }
@@ -38,6 +42,7 @@ export class PortraitEnhancer {
   /**
    * Helper: Converts Mat to ImageData
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public static matToImageData(mat: any): ImageData {
     const cv = window.cv;
     const dst = new cv.Mat();
@@ -51,6 +56,7 @@ export class PortraitEnhancer {
   /**
    * Core AI Portrait Enhancement Pipeline
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public enhance(src: any, options: PortraitEnhanceOptions = {}): any {
     const cv = this.cv;
     const {
@@ -61,12 +67,12 @@ export class PortraitEnhancer {
       sharpness = 0.5
     } = options;
 
-    let processing = new cv.Mat();
+    const processing = new cv.Mat();
     cv.cvtColor(src, processing, cv.COLOR_RGBA2RGB);
 
     // 1. Iterative Bilateral Filtering (Skin Smoothing)
     // Preserves edges while smoothing "noise" (skin textures)
-    let smooth = new cv.Mat();
+    const smooth = new cv.Mat();
     for (let i = 0; i < smoothingStep; i++) {
       cv.bilateralFilter(processing, smooth, 9, 75, 75, cv.BORDER_DEFAULT);
       smooth.copyTo(processing);
@@ -74,11 +80,11 @@ export class PortraitEnhancer {
     smooth.delete();
 
     // 2. L-Channel CLAHE (Local Contrast)
-    let lab = new cv.Mat();
+    const lab = new cv.Mat();
     cv.cvtColor(processing, lab, cv.COLOR_RGB2Lab);
-    let labChannels = new cv.MatVector();
+    const labChannels = new cv.MatVector();
     cv.split(lab, labChannels);
-    let lChannel = labChannels.get(0);
+    const lChannel = labChannels.get(0);
 
     const clahe = new cv.CLAHE(claheClipLimit, new cv.Size(claheTileSize, claheTileSize));
     clahe.apply(lChannel, lChannel);
@@ -94,11 +100,11 @@ export class PortraitEnhancer {
     lab.delete();
 
     // 3. Vibrance Boost (HSV Space)
-    let hsv = new cv.Mat();
+    const hsv = new cv.Mat();
     cv.cvtColor(processing, hsv, cv.COLOR_RGB2HSV);
-    let hsvChannels = new cv.MatVector();
+    const hsvChannels = new cv.MatVector();
     cv.split(hsv, hsvChannels);
-    let sChannel = hsvChannels.get(1);
+    const sChannel = hsvChannels.get(1);
 
     // Adjust Saturation
     sChannel.convertTo(sChannel, -1, vibrance, 0);
@@ -115,12 +121,12 @@ export class PortraitEnhancer {
     // 4. Unsharp Masking (Micro-detail restoration)
     // Formula: Result = Original + (Original - Blurred) * Sharpness
     if (sharpness > 0) {
-      let blurred = new cv.Mat();
+      const blurred = new cv.Mat();
       cv.GaussianBlur(processing, blurred, new cv.Size(3, 3), 0, 0, cv.BORDER_DEFAULT);
       
       // We can use a 3x3 sharpening kernel directly for "micro-details"
       // Kernel: [[0, -1, 0], [-1, 5, -1], [0, -1, 0]] scaled by sharpness
-      let kernel = cv.matFromArray(3, 3, cv.CV_32F, [
+      const kernel = cv.matFromArray(3, 3, cv.CV_32F, [
         0, -sharpness, 0,
         -sharpness, 1 + 4 * sharpness, -sharpness,
         0, -sharpness, 0
@@ -133,7 +139,7 @@ export class PortraitEnhancer {
     }
 
     // 5. Back to RGBA
-    let dst = new cv.Mat();
+    const dst = new cv.Mat();
     cv.cvtColor(processing, dst, cv.COLOR_RGB2RGBA);
 
     processing.delete();

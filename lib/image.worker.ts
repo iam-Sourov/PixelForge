@@ -40,5 +40,6 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
   }
 
   // Send back
-  (postMessage as any)(processed, [processed.data.buffer]);
+  const ctx = self as unknown as { postMessage: (message: unknown, transfer?: Transferable[]) => void };
+  ctx.postMessage(processed, [processed.data.buffer]);
 };

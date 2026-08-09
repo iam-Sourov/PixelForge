@@ -94,8 +94,10 @@ export default function RemoveBgPage() {
 
               {/* Custom render bypassing NextJS Image Optimization limits locally */}
               {resultUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img src={resultUrl} alt="Result" className="max-h-[500px] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in duration-700 dark:drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)]" />
               ) : (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img src={originalUrl} alt="Original" className="max-h-[500px] object-contain opacity-50 blur-sm brightness-50 dark:brightness-50" />
               )}
             </div>

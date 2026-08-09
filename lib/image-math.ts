@@ -37,15 +37,6 @@ export function applyBrightnessContrast(imageData: ImageData, brightness: number
   return new ImageData(out, imageData.width, imageData.height);
 }
 
-function rgbToLuma(r: number, g: number, b: number): number {
-  return 0.299 * r + 0.587 * g + 0.114 * b;
-}
-
-function lumaToRgb(r: number, g: number, b: number, lumaTarget: number) {
-  const lumaCurrent = rgbToLuma(r, g, b);
-  const diff = lumaTarget - lumaCurrent;
-  return [r + diff, g + diff, b + diff];
-}
 
 // Industry-standard Fast Box Blur (Separable, Moving Window) O(N)
 function fastBoxBlur1D(src: Uint8ClampedArray, out: Uint8ClampedArray, w: number, h: number, radius: number, isHorizontal: boolean) {
@@ -67,7 +58,7 @@ function fastBoxBlur1D(src: Uint8ClampedArray, out: Uint8ClampedArray, w: number
     }
     
     for (let j = 0; j < (isHorizontal ? w : h); j++) {
-      let outIdx = isHorizontal ? (i * w + j) * 4 : (j * w + i) * 4;
+      const outIdx = isHorizontal ? (i * w + j) * 4 : (j * w + i) * 4;
       out[outIdx] = r / diameter;
       out[outIdx + 1] = g / diameter;
       out[outIdx + 2] = b / diameter;
@@ -90,11 +81,11 @@ function fastBoxBlur1D(src: Uint8ClampedArray, out: Uint8ClampedArray, w: number
 }
 
 export function fastGaussianBlur(imageData: ImageData, radius: number): ImageData {
-  let src = imageData.data;
-  let w = imageData.width;
-  let h = imageData.height;
-  let out1 = new Uint8ClampedArray(src.length);
-  let out2 = new Uint8ClampedArray(src.length);
+  const src = imageData.data;
+  const w = imageData.width;
+  const h = imageData.height;
+  const out1 = new Uint8ClampedArray(src.length);
+  const out2 = new Uint8ClampedArray(src.length);
   
   // 3 passes of box blur approximate Gaussian perfectly
   // Using reduced radius to match true sigma
@@ -281,8 +272,8 @@ export function bilateralFilterDenoise(imageData: ImageData, spatialSigma: numbe
   return new ImageData(out2, sw, sh);
 }
 
-// 4. Micro-Contrast Sharpener (Applied after upscaling for immediate clarity)
-export function microSharpen(imageData: ImageData, strength: number = 0.5): ImageData {
+// 4. Micro-Contrast Sharpener (Thresholded to avoid noise amplification)
+export function microSharpen(imageData: ImageData, strength: number = 0.5, threshold: number = 10): ImageData {
   if (strength <= 0) return imageData;
   const src = imageData.data;
   const sw = imageData.width;
@@ -299,10 +290,21 @@ export function microSharpen(imageData: ImageData, strength: number = 0.5): Imag
       const left = (y * sw + Math.max(x - 1, 0)) * 4;
       const right = (y * sw + Math.min(x + 1, sw - 1)) * 4;
 
+      // Calculate local luminance to detect edge strength
+      const val = src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114;
+      const tVal = src[top] * 0.299 + src[top + 1] * 0.587 + src[top + 2] * 0.114;
+      const bVal = src[bottom] * 0.299 + src[bottom + 1] * 0.587 + src[bottom + 2] * 0.114;
+      const lVal = src[left] * 0.299 + src[left + 1] * 0.587 + src[left + 2] * 0.114;
+      const rVal = src[right] * 0.299 + src[right + 1] * 0.587 + src[right + 2] * 0.114;
+
+      const lumaEdge = Math.abs(4 * val - tVal - bVal - lVal - rVal);
+      // Suppress sharpening in flat/low-contrast areas (scale factor 0-1)
+      const edgeScale = lumaEdge > threshold ? Math.min(1.0, (lumaEdge - threshold) / 8) : 0;
+
       for (let c = 0; c < 3; c++) {
-        // Laplace Edge extraction (5x center - sides) -> 4x center - sides = High Pass
+        // Laplace Edge extraction
         const edge = 4 * src[i + c] - src[top + c] - src[bottom + c] - src[left + c] - src[right + c];
-        out[i + c] = clamp(src[i + c] + edge * strength);
+        out[i + c] = clamp(src[i + c] + edge * strength * edgeScale);
       }
       out[i + 3] = src[i + 3];
     }

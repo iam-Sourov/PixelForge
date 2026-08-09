@@ -7,7 +7,6 @@ import {
   Download, 
   Sparkles, 
   RefreshCw, 
-  Cpu, 
   Activity, 
   ShieldCheck,
   Zap,
@@ -74,9 +73,9 @@ export default function EnhancePage() {
 
       setEnhancedUrl(data.enhancedImage);
       setProgress(100);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setErrorText(err.message || "Python script failed. Ensure 'opencv-python' is installed.");
+      setErrorText(err instanceof Error ? err.message : "Python script failed. Ensure 'opencv-python' is installed.");
     } finally {
       clearInterval(interval);
       setIsProcessing(false);

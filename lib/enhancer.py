@@ -5,13 +5,15 @@ import base64
 
 def enhance_image(image_data):
     """
-    Ultimate Studio Portrait Enhancer (Python Core)
+    Ultimate Studio Portrait Enhancer (Python Core) - Premium Upgrade
     Steps:
-    1. Denoise (Non-Local Means)
-    2. Skin Smoothing (Iterative Bilateral Filter)
-    3. Professional Lighting (L-Channel CLAHE)
-    4. Detail Restoration (Unsharp Masking / Sharpening Kernel)
-    5. Color Finish (Vibrance, Temperature & Brightness)
+    1. Grayscale Detection (preserves neutral black & white tones)
+    2. Professional Noise Reduction (Fast Non-Local Means with h=8)
+    3. Soft Skin Smoothing (Bilateral Filter blended with original)
+    4. Studio Lighting (LAB CLAHE with clipLimit=1.2 to preserve details)
+    5. Detail Restoration (Edge-Masked Unsharp Masking)
+    6. Premium Color Finish (Saturation & Highlights temperature blue-shift, bypassed for grayscale)
+    7. Sub-contrast & Brightness balance
     """
     try:
         # Decode image from base64
@@ -23,51 +25,82 @@ def enhance_image(image_data):
     if img is None:
         return None
 
+    # Detect if image is grayscale/B&W by analyzing channel variance
+    is_grayscale = False
+    if len(img.shape) == 3 and img.shape[2] == 3:
+        # Check standard deviation across channels for each pixel
+        channel_std = np.std(img, axis=2)
+        if np.mean(channel_std) < 8.0:
+            is_grayscale = True
+
     # Step 1: Denoise (Fast Non-Local Means)
-    # Cleans up digital noise while preserving overall structure
-    img = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 21)
+    # Calibrated h=5 to clean noise/grain while preserving fine textures and film grain
+    if is_grayscale:
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        denoised = cv2.fastNlMeansDenoising(gray, None, h=5, templateWindowSize=7, searchWindowSize=21)
+        img = cv2.cvtColor(denoised, cv2.COLOR_GRAY2BGR)
+    else:
+        img = cv2.fastNlMeansDenoisingColored(img, None, h=5, hColor=5, templateWindowSize=7, searchWindowSize=21)
 
     # Step 2: Skin Smoothing (Precision Bilateral Filter)
-    # Single pass with lower sigma to prevent "dreamy" blur while still smoothing skin
-    img = cv2.bilateralFilter(img, d=7, sigmaColor=50, sigmaSpace=50)
+    # Apply a gentle bilateral filter
+    smoothed = cv2.bilateralFilter(img, d=5, sigmaColor=25, sigmaSpace=25)
+    # Blend smoothed skin back with original to preserve natural pores/texture (70% original, 30% smoothed)
+    img = cv2.addWeighted(img, 0.7, smoothed, 0.3, 0)
 
     # Step 3: Professional Lighting (L-Channel CLAHE in LAB space)
-    # Enhances details in shadows/highlights (folds in shirt) without shifting colors
+    # Low clipLimit (1.2) for professional dynamic range expansion without over-contrast
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
     l, a, b = cv2.split(lab)
-    clahe = cv2.createCLAHE(clipLimit=2.2, tileGridSize=(8,8)) # Slightly higher clipLimit for crisper detail
+    clahe = cv2.createCLAHE(clipLimit=1.2, tileGridSize=(8, 8))
     l = clahe.apply(l)
     img = cv2.cvtColor(cv2.merge((l, a, b)), cv2.COLOR_LAB2BGR)
 
-    # Step 4: Detail Restoration (Advanced Sharpening Kernel)
-    # Restores micro-details in hair, eyes, and beard
-    kernel = np.array([
-        [-1, -1, -1], 
-        [-1,  9, -1], 
-        [-1, -1, -1]
-    ])
-    # Increased sharpening ratio to 0.5 for punchier detail
-    sharpened = cv2.filter2D(img, -1, kernel)
-    img = cv2.addWeighted(img, 0.5, sharpened, 0.5, 0)
-
-    # Bonus: Final Crispness Pass
-    # Subsurface scattering control to ensure textures remain "real"
-    img = cv2.detailEnhance(img, sigma_s=10, sigma_r=0.15)
-
-    # Step 5: Color Finish (Vibrance & Color Balance)
-    # Target: Clean, cool-toned "studio" look with popping colors
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    h, s, v = cv2.split(hsv)
-    # Boost saturation by 20%
-    s = cv2.multiply(s, 1.2)
-    img = cv2.cvtColor(cv2.merge((h, s, v)), cv2.COLOR_HSV2BGR)
-
-    # Cool temperature adjustment (Slightly blue-shifted)
-    blue_channel = img[:, :, 0]
-    img[:, :, 0] = cv2.add(blue_channel, 5) # Increase blue channel slightly
+    # Step 4: Detail Restoration (Edge-Masked Unsharp Masking)
+    # Only sharpens true contrast edges (like eyes, glasses, clothing details),
+    # preventing noise/grain amplification in flat regions (like skin or sky).
+    gray_edges = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    laplacian = cv2.Laplacian(gray_edges, cv2.CV_32F, ksize=3)
+    laplacian = np.absolute(laplacian)
     
-    # Final scale/brightness/contrast pass
-    img = cv2.convertScaleAbs(img, alpha=1.05, beta=2)
+    # Threshold the Laplacian to isolate edges and blur it to make a smooth mask
+    _, mask = cv2.threshold(laplacian, 10, 255, cv2.THRESH_TOZERO)
+    mask = cv2.GaussianBlur(mask, (5, 5), 0)
+    
+    max_val = np.max(mask)
+    if max_val > 0:
+        mask = mask / max_val
+    else:
+        mask = np.zeros_like(mask)
+        
+    mask_3d = cv2.merge([mask, mask, mask])
+
+    # Unsharp Masking: detail = original - blurred
+    blurred = cv2.GaussianBlur(img, (0, 0), 1.5)
+    detail = cv2.subtract(img, blurred)
+    
+    # Blend detail back ONLY on the edge mask (scale = 0.4)
+    img = cv2.add(img, cv2.multiply(detail, mask_3d, scale=0.4, dtype=cv2.CV_8U))
+
+    # Step 5: Color Finish (Saturation & Temperature)
+    # Bypassed for grayscale images to avoid color tinting
+    if not is_grayscale:
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(hsv)
+        
+        # Soft saturation boost (10%)
+        s = cv2.multiply(s, 1.1)
+        img = cv2.cvtColor(cv2.merge((h, s, v)), cv2.COLOR_HSV2BGR)
+
+        # Cool temperature adjustment (slight blue-shift in highlights/midtones)
+        b_channel, g_channel, r_channel = cv2.split(img)
+        # Gently add 2 to the blue channel
+        b_channel = cv2.add(b_channel, 2)
+        img = cv2.merge((b_channel, g_channel, r_channel))
+
+    # Step 6: Final Scale / Brightness / Contrast Pass
+    # Subtly boost contrast (2%) and brightness (1)
+    img = cv2.convertScaleAbs(img, alpha=1.02, beta=1)
 
     # Encode back to base64
     _, buffer = cv2.imencode('.png', img)
