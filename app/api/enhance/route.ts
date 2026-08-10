@@ -29,12 +29,28 @@ if (typeof globalThis.ImageData === "undefined") {
 function runPythonEnhancer(imageBuffer: Buffer, scriptPath: string): Promise<string> {
   return new Promise((resolve, reject) => {
     let resolved = false;
+    let proc: ReturnType<typeof spawn> | null = null;
+
+    // Timeout after 8 seconds to prevent hanging Python processes in production
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        if (proc) {
+          try {
+            proc.kill("SIGKILL");
+          } catch (e) {
+            console.error("Failed to kill timed-out Python process:", e);
+          }
+        }
+        reject(new Error("Python process timed out."));
+      }
+    }, 8000);
 
     const trySpawn = (cmd: string) => {
       let stdoutData = "";
       let stderrData = "";
       
-      const proc = spawn(cmd, [scriptPath]);
+      proc = spawn(cmd, [scriptPath]);
 
       proc.on("error", (err) => {
         if (resolved) return;
@@ -44,21 +60,27 @@ function runPythonEnhancer(imageBuffer: Buffer, scriptPath: string): Promise<str
           console.warn("python3 not found, trying python...");
           trySpawn("python");
         } else {
+          clearTimeout(timer);
           resolved = true;
           reject(err);
         }
       });
 
-      proc.stdout.on("data", (data) => {
-        stdoutData += data.toString();
-      });
+      if (proc.stdout) {
+        proc.stdout.on("data", (data) => {
+          stdoutData += data.toString();
+        });
+      }
 
-      proc.stderr.on("data", (data) => {
-        stderrData += data.toString();
-      });
+      if (proc.stderr) {
+        proc.stderr.on("data", (data) => {
+          stderrData += data.toString();
+        });
+      }
 
       proc.on("close", (code) => {
         if (resolved) return;
+        clearTimeout(timer);
         resolved = true;
         
         if (code !== 0) {
@@ -70,10 +92,15 @@ function runPythonEnhancer(imageBuffer: Buffer, scriptPath: string): Promise<str
 
       // Write base64 image data to process stdin
       try {
-        proc.stdin.write(imageBuffer.toString("base64"));
-        proc.stdin.end();
+        if (proc.stdin) {
+          proc.stdin.write(imageBuffer.toString("base64"));
+          proc.stdin.end();
+        } else {
+          throw new Error("stdin stream is null");
+        }
       } catch (err) {
         if (!resolved) {
+          clearTimeout(timer);
           resolved = true;
           reject(err);
         }

@@ -23,12 +23,32 @@ export async function POST(req: NextRequest) {
     if (bgColor === "blue") hexBg = "#BAE6FD";
 
     // 1) Crop and Enhance using Sharp
+    const meta = await sharp(buffer).metadata();
+    const imgWidth = meta.width || 0;
+    const imgHeight = meta.height || 0;
+
+    const left = Math.max(0, Math.round(crop.x));
+    const top = Math.max(0, Math.round(crop.y));
+    let width = Math.round(crop.width);
+    let height = Math.round(crop.height);
+
+    if (imgWidth > 0) {
+      if (left + width > imgWidth) {
+        width = Math.max(1, imgWidth - left);
+      }
+    }
+    if (imgHeight > 0) {
+      if (top + height > imgHeight) {
+        height = Math.max(1, imgHeight - top);
+      }
+    }
+
     const singleBuff = await sharp(buffer)
       .extract({ 
-        left: Math.max(0, Math.round(crop.x)), 
-        top: Math.max(0, Math.round(crop.y)), 
-        width: Math.round(crop.width), 
-        height: Math.round(crop.height) 
+        left, 
+        top, 
+        width, 
+        height 
       })
       .resize(413, 531, { fit: "cover" }) // 35x45 mm at 300dpi
       .flatten({ background: hexBg })
