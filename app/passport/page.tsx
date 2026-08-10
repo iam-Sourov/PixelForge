@@ -5,7 +5,7 @@ import { UploadZone } from "@/components/shared/UploadZone";
 import { Button } from "@/components/ui/button";
 import { Download, RefreshCw, Sparkles, Check, Grid3X3 } from "lucide-react";
 import { Spotlight } from "@/components/ui/spotlight";
-import { cn } from "@/lib/utils";
+import { cn, fixExifOrientation } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import Cropper, { Area } from "react-easy-crop";
 
@@ -35,9 +35,15 @@ export default function PassportPage() {
     setCrop({ x: 0, y: 0 });
     setZoom(1);
 
+    if (transparentUrl) {
+      URL.revokeObjectURL(transparentUrl);
+      setTransparentUrl(null);
+    }
+
     try {
+      const orientedBlob = await fixExifOrientation(selectedFile);
       const { removeBackground } = await import("@imgly/background-removal");
-      const blob = await removeBackground(selectedFile);
+      const blob = await removeBackground(orientedBlob);
 
       setTransparentBlob(blob);
       const tUrl = URL.createObjectURL(blob);
@@ -88,6 +94,9 @@ export default function PassportPage() {
   };
 
   const reset = () => {
+    if (transparentUrl) {
+      URL.revokeObjectURL(transparentUrl);
+    }
     setFile(null);
     setTransparentUrl(null);
     setTransparentBlob(null);

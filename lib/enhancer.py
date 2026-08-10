@@ -60,7 +60,9 @@ def enhance_image(image_data):
     # Only sharpens true contrast edges (like eyes, glasses, clothing details),
     # preventing noise/grain amplification in flat regions (like skin or sky).
     gray_edges = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    laplacian = cv2.Laplacian(gray_edges, cv2.CV_32F, ksize=3)
+    # Smooth before Laplacian to eliminate high-frequency noise from edge detection
+    gray_edges_smooth = cv2.GaussianBlur(gray_edges, (5, 5), 0)
+    laplacian = cv2.Laplacian(gray_edges_smooth, cv2.CV_32F, ksize=3)
     laplacian = np.absolute(laplacian)
     
     # Threshold the Laplacian to isolate edges and blur it to make a smooth mask
@@ -75,12 +77,14 @@ def enhance_image(image_data):
         
     mask_3d = cv2.merge([mask, mask, mask])
 
-    # Unsharp Masking: detail = original - blurred
-    blurred = cv2.GaussianBlur(img, (0, 0), 1.5)
-    detail = cv2.subtract(img, blurred)
+    # Convert to float for correct unsharp masking (retaining negative and positive detail values)
+    img_f = img.astype(np.float32)
+    blurred = cv2.GaussianBlur(img_f, (0, 0), 1.5)
+    detail = img_f - blurred
     
-    # Blend detail back ONLY on the edge mask (scale = 0.4)
-    img = cv2.add(img, cv2.multiply(detail, mask_3d, scale=0.4, dtype=cv2.CV_8U))
+    # Blend detail back ONLY on the edge mask (scale = 0.35 for a slightly softer, natural detail boost)
+    sharpened = img_f + detail * mask_3d * 0.35
+    img = np.clip(sharpened, 0, 255).astype(np.uint8)
 
     # Step 5: Color Finish (Saturation & Temperature)
     # Bypassed for grayscale images to avoid color tinting
@@ -88,19 +92,19 @@ def enhance_image(image_data):
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         h, s, v = cv2.split(hsv)
         
-        # Soft saturation boost (10%)
-        s = cv2.multiply(s, 1.1)
+        # Soft, natural saturation boost (5%)
+        s = cv2.multiply(s, 1.05)
         img = cv2.cvtColor(cv2.merge((h, s, v)), cv2.COLOR_HSV2BGR)
 
         # Cool temperature adjustment (slight blue-shift in highlights/midtones)
         b_channel, g_channel, r_channel = cv2.split(img)
-        # Gently add 2 to the blue channel
-        b_channel = cv2.add(b_channel, 2)
+        # Gently add 1 to the blue channel for a very subtle cooling effect
+        b_channel = cv2.add(b_channel, 1)
         img = cv2.merge((b_channel, g_channel, r_channel))
 
     # Step 6: Final Scale / Brightness / Contrast Pass
-    # Subtly boost contrast (2%) and brightness (1)
-    img = cv2.convertScaleAbs(img, alpha=1.02, beta=1)
+    # Very subtly boost contrast (1%) to keep it looking extremely natural
+    img = cv2.convertScaleAbs(img, alpha=1.01, beta=0)
 
     # Encode back to base64
     _, buffer = cv2.imencode('.png', img)

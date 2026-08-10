@@ -275,7 +275,13 @@ export function bilateralFilterDenoise(imageData: ImageData, spatialSigma: numbe
 // 4. Micro-Contrast Sharpener (Thresholded to avoid noise amplification)
 export function microSharpen(imageData: ImageData, strength: number = 0.5, threshold: number = 10): ImageData {
   if (strength <= 0) return imageData;
+  
+  // Apply a Gaussian blur to a copy of the image to calculate the edge mask,
+  // which prevents noise/grain from being detected as edges and sharpened.
+  const edgeSource = fastGaussianBlur(imageData, 2);
+  
   const src = imageData.data;
+  const edgeData = edgeSource.data;
   const sw = imageData.width;
   const sh = imageData.height;
   const out = new Uint8ClampedArray(src.length);
@@ -290,19 +296,19 @@ export function microSharpen(imageData: ImageData, strength: number = 0.5, thres
       const left = (y * sw + Math.max(x - 1, 0)) * 4;
       const right = (y * sw + Math.min(x + 1, sw - 1)) * 4;
 
-      // Calculate local luminance to detect edge strength
-      const val = src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114;
-      const tVal = src[top] * 0.299 + src[top + 1] * 0.587 + src[top + 2] * 0.114;
-      const bVal = src[bottom] * 0.299 + src[bottom + 1] * 0.587 + src[bottom + 2] * 0.114;
-      const lVal = src[left] * 0.299 + src[left + 1] * 0.587 + src[left + 2] * 0.114;
-      const rVal = src[right] * 0.299 + src[right + 1] * 0.587 + src[right + 2] * 0.114;
+      // Calculate local luminance on the blurred/denoised source to detect structural edges
+      const val = edgeData[i] * 0.299 + edgeData[i + 1] * 0.587 + edgeData[i + 2] * 0.114;
+      const tVal = edgeData[top] * 0.299 + edgeData[top + 1] * 0.587 + edgeData[top + 2] * 0.114;
+      const bVal = edgeData[bottom] * 0.299 + edgeData[bottom + 1] * 0.587 + edgeData[bottom + 2] * 0.114;
+      const lVal = edgeData[left] * 0.299 + edgeData[left + 1] * 0.587 + edgeData[left + 2] * 0.114;
+      const rVal = edgeData[right] * 0.299 + edgeData[right + 1] * 0.587 + edgeData[right + 2] * 0.114;
 
       const lumaEdge = Math.abs(4 * val - tVal - bVal - lVal - rVal);
       // Suppress sharpening in flat/low-contrast areas (scale factor 0-1)
       const edgeScale = lumaEdge > threshold ? Math.min(1.0, (lumaEdge - threshold) / 8) : 0;
 
       for (let c = 0; c < 3; c++) {
-        // Laplace Edge extraction
+        // Laplace Edge extraction on original src
         const edge = 4 * src[i + c] - src[top + c] - src[bottom + c] - src[left + c] - src[right + c];
         out[i + c] = clamp(src[i + c] + edge * strength * edgeScale);
       }

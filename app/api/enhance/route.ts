@@ -100,7 +100,7 @@ async function runNodeEnhancer(imageBuffer: Buffer): Promise<string> {
     console.warn("Skipping CLAHE due to metadata read failure:", e);
   }
   
-  processedSharp = processedSharp.modulate({ brightness: 1.02, saturation: 1.1 });
+  processedSharp = processedSharp.modulate({ brightness: 1.01, saturation: 1.05 });
   
   const { data, info } = await processedSharp
     .ensureAlpha()
@@ -123,17 +123,17 @@ async function runNodeEnhancer(imageBuffer: Buffer): Promise<string> {
     }
   }
 
-  // 3. Apply Calibrated Denoising & Smoothing (Bilateral Filter blended 30% with 70% original)
-  // Calibrated with spatialSigma = 3.0 and rangeSigma = 15.0 to wash out color grain while retaining skin texture
-  const smoothed = bilateralFilterDenoise(imgData, 3.0, 15.0);
+  // 3. Apply Calibrated Denoising & Smoothing (Bilateral Filter blended 50% with 50% original)
+  // Calibrated with spatialSigma = 3.5 and rangeSigma = 20.0 to wash out color grain while retaining skin texture
+  const smoothed = bilateralFilterDenoise(imgData, 3.5, 20.0);
   for (let i = 0; i < imgData.data.length; i += 4) {
-    imgData.data[i] = Math.min(255, Math.max(0, Math.round(imgData.data[i] * 0.7 + smoothed.data[i] * 0.3)));
-    imgData.data[i + 1] = Math.min(255, Math.max(0, Math.round(imgData.data[i + 1] * 0.7 + smoothed.data[i + 1] * 0.3)));
-    imgData.data[i + 2] = Math.min(255, Math.max(0, Math.round(imgData.data[i + 2] * 0.7 + smoothed.data[i + 2] * 0.3)));
+    imgData.data[i] = Math.min(255, Math.max(0, Math.round(imgData.data[i] * 0.5 + smoothed.data[i] * 0.5)));
+    imgData.data[i + 1] = Math.min(255, Math.max(0, Math.round(imgData.data[i + 1] * 0.5 + smoothed.data[i + 1] * 0.5)));
+    imgData.data[i + 2] = Math.min(255, Math.max(0, Math.round(imgData.data[i + 2] * 0.5 + smoothed.data[i + 2] * 0.5)));
   }
 
   // 4. Apply Frequency Separation (Detail / Clarity boost) - Softened
-  imgData = frequencySeparation(imgData, 0.08);
+  imgData = frequencySeparation(imgData, 0.03);
 
   // 5. Apply micro-sharpening - Thresholded at 15 to bypass noise/grain
   imgData = microSharpen(imgData, 0.15, 15);
@@ -143,7 +143,7 @@ async function runNodeEnhancer(imageBuffer: Buffer): Promise<string> {
   if (!isGrayscale) {
     const outData = imgData.data;
     for (let i = 0; i < outData.length; i += 4) {
-      outData[i + 2] = Math.min(255, outData[i + 2] + 2);
+      outData[i + 2] = Math.min(255, outData[i + 2] + 1);
     }
   }
 
@@ -171,7 +171,14 @@ export async function POST(req: NextRequest) {
 
     // Strip out base64 URL prefix if present
     const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
-    const imageBuffer = Buffer.from(base64Data, "base64");
+    let imageBuffer = Buffer.from(base64Data, "base64");
+
+    // Auto-orient the image using sharp to prevent EXIF rotation issues
+    try {
+      imageBuffer = Buffer.from(await sharp(imageBuffer).rotate().toBuffer());
+    } catch (err) {
+      console.warn("Failed to auto-orient image using sharp:", err);
+    }
 
     const scriptPath = path.join(process.cwd(), "lib", "enhancer.py");
 

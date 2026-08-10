@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Sparkles, RefreshCw } from "lucide-react";
 import { Spotlight } from "@/components/ui/spotlight";
 import { useTheme } from "next-themes";
+import { fixExifOrientation } from "@/lib/utils";
 
 export default function RemoveBgPage() {
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
@@ -19,13 +20,18 @@ export default function RemoveBgPage() {
 
   const handleUpload = async (file: File) => {
     setErrorText(null);
-    setOriginalUrl(URL.createObjectURL(file));
+    if (originalUrl) URL.revokeObjectURL(originalUrl);
+    if (resultUrl) URL.revokeObjectURL(resultUrl);
+
+    const originalObjectUrl = URL.createObjectURL(file);
+    setOriginalUrl(originalObjectUrl);
     setResultUrl(null);
     setIsProcessing(true);
     
     try {
+      const orientedBlob = await fixExifOrientation(file);
       const { removeBackground } = await import("@imgly/background-removal");
-      const blob = await removeBackground(file);
+      const blob = await removeBackground(orientedBlob);
       const url = URL.createObjectURL(blob);
       setResultUrl(url);
     } catch {
@@ -36,6 +42,8 @@ export default function RemoveBgPage() {
   };
 
   const clearImage = () => {
+    if (originalUrl) URL.revokeObjectURL(originalUrl);
+    if (resultUrl) URL.revokeObjectURL(resultUrl);
     setOriginalUrl(null);
     setResultUrl(null);
     setErrorText(null);
