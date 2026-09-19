@@ -15,9 +15,33 @@ const fontMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "PixelForge | AI Studio Tools",
-  description: "Local machine learning toolkit for image enhancement, subject extraction, and passport alignment.",
-  keywords: ["Image Enhancer", "Background Removal", "Passport Crop", "AI Agent"],
+  title: "PixelForge - AI Studio & Photo Workshop",
+  description: "Next-generation AI Photo Studio for 2-Picture Joint photos, instant background removal, portrait remastering, and passport photo generation.",
+  keywords: [
+    "PixelForge",
+    "2-Picture Joint Studio",
+    "Duo Portrait Fusion",
+    "Passport Photo Generator",
+    "Background Remover",
+    "Photo Enhancer",
+    "AI Studio",
+    "Bangladeshi Studio Photo"
+  ],
+  authors: [{ name: "Sourov" }],
+  creator: "Sourov",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://pixelforge.ai",
+    title: "PixelForge - AI Studio & Photo Workshop",
+    description: "Next-generation AI Photo Studio for 2-Picture Joint photos, instant background removal, portrait remastering, and passport photo generation.",
+    siteName: "PixelForge",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PixelForge - AI Studio & Photo Workshop",
+    description: "Next-generation AI Photo Studio for 2-Picture Joint photos, instant background removal, portrait remastering, and passport photo generation.",
+  },
 };
 
 export default function RootLayout({
