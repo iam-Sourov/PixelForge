@@ -13,9 +13,12 @@ export function Footer() {
           </p>
         </div>
         
-        <nav className="flex items-center gap-6">
+        <nav className="flex items-center gap-6 flex-wrap justify-center">
           <Link href="/enhance" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             Enhancer
+          </Link>
+          <Link href="/dual-adjust" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            2-Picture Joint
           </Link>
           <Link href="/passport" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             Passport
