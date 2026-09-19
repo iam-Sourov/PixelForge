@@ -22,9 +22,13 @@ export function UploadZone({
   onFileSelect,
   onClear,
   title = "Drop your photo here",
-  description = "Supports JPG, PNG up to 10MB",
-  accept = { "image/*": [] },
-  maxSize = 10 * 1024 * 1024,
+  description = "Supports JPG, PNG, HEIC up to 25MB",
+  accept = {
+    "image/*": [],
+    "image/heic": [".heic"],
+    "image/heif": [".heif"],
+  },
+  maxSize = 25 * 1024 * 1024,
   className,
   currentImage,
 }: UploadZoneProps) {

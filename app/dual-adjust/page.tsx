@@ -1,0 +1,834 @@
+"use client";
+
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { UploadZone } from "@/components/shared/UploadZone";
+import { Button } from "@/components/ui/button";
+import { Spotlight } from "@/components/ui/spotlight";
+import { useGeminiStore } from "@/lib/useGeminiStore";
+import { useTheme } from "next-themes";
+import { 
+  Sparkles, 
+  Download, 
+  RefreshCw, 
+  Check, 
+  Bot, 
+  ArrowRight,
+  ArrowLeftRight,
+  Sliders,
+  Layers,
+  FileImage,
+  Eye,
+  Maximize2,
+  Users
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { processImageForClient } from "@/lib/image-client";
+import { motion } from "framer-motion";
+
+type BackdropType = "blue" | "white" | "gray" | "dark" | "gradient_purple" | "gradient_warm" | "transparent";
+type AspectRatio = "4:3" | "4:5" | "1:1";
+
+export default function DualAdjustPage() {
+  // Input raw files
+  const [image1Url, setImage1Url] = useState<string | null>(null);
+  const [image2Url, setImage2Url] = useState<string | null>(null);
+
+  // Transformed transparent subjects
+  const [person1Transparent, setPerson1Transparent] = useState<string | null>(null);
+  const [person2Transparent, setPerson2Transparent] = useState<string | null>(null);
+
+  // Studio adjustment state
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isConverting1, setIsConverting1] = useState(false);
+  const [isConverting2, setIsConverting2] = useState(false);
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+
+  // Placement & Transform controls
+  const [scale1, setScale1] = useState(1.0);
+  const [scale2, setScale2] = useState(1.0);
+  const [offsetY1, setOffsetY1] = useState(0);
+  const [offsetY2, setOffsetY2] = useState(0);
+  const [closeness, setCloseness] = useState(0); // Spacing between subjects (-100 to +100)
+  const [isSwapped, setIsSwapped] = useState(false); // Left vs Right order
+  const [layerOrder, setLayerOrder] = useState<"1_over_2" | "2_over_1">("1_over_2");
+  const [selectedBg, setSelectedBg] = useState<BackdropType>("blue"); // Default BD Sky Blue!
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>("4:3");
+  const [showGuidelines, setShowGuidelines] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // HTML5 Live Canvas ref
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const { apiKey, selectedModel, setIsKeyModalOpen } = useGeminiStore();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  const handleUpload1 = async (file: File) => {
+    setIsConverting1(true);
+    setErrorText(null);
+    try {
+      const processed = await processImageForClient(file);
+      if (image1Url) URL.revokeObjectURL(image1Url);
+      const url = URL.createObjectURL(processed);
+      setImage1Url(url);
+      setPerson1Transparent(null);
+      setPerson2Transparent(null);
+    } catch (e) {
+      console.error(e);
+      setErrorText("Failed to process Image 1. Please try another image.");
+    } finally {
+      setIsConverting1(false);
+    }
+  };
+
+  const handleUpload2 = async (file: File) => {
+    setIsConverting2(true);
+    setErrorText(null);
+    try {
+      const processed = await processImageForClient(file);
+      if (image2Url) URL.revokeObjectURL(image2Url);
+      const url = URL.createObjectURL(processed);
+      setImage2Url(url);
+      setPerson1Transparent(null);
+      setPerson2Transparent(null);
+    } catch (e) {
+      console.error(e);
+      setErrorText("Failed to process Image 2. Please try another image.");
+    } finally {
+      setIsConverting2(false);
+    }
+  };
+
+  const toBase64 = async (url: string): Promise<string> => {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const startJointGeneration = async () => {
+    if (!image1Url || !image2Url) {
+      setErrorText("Please upload both Person 1 and Person 2 photos.");
+      return;
+    }
+
+    setIsProcessing(true);
+    setErrorText(null);
+    setAiAnalysis(null);
+
+    try {
+      const b64_1 = await toBase64(image1Url);
+      const b64_2 = await toBase64(image2Url);
+
+      const res = await fetch("/api/gemini/adjust-dual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image1: b64_1,
+          image2: b64_2,
+          apiKey,
+          model: selectedModel,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to isolate subjects for joint photo.");
+      }
+
+      setPerson1Transparent(data.person1Transparent);
+      setPerson2Transparent(data.person2Transparent);
+      if (data.aiAnalysis) setAiAnalysis(data.aiAnalysis);
+    } catch (e: unknown) {
+      console.error(e);
+      setErrorText(e instanceof Error ? e.message : "Error isolating subjects. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const resetAll = () => {
+    if (image1Url) URL.revokeObjectURL(image1Url);
+    if (image2Url) URL.revokeObjectURL(image2Url);
+    setImage1Url(null);
+    setImage2Url(null);
+    setPerson1Transparent(null);
+    setPerson2Transparent(null);
+    setAiAnalysis(null);
+    setErrorText(null);
+    setScale1(1.0);
+    setScale2(1.0);
+    setOffsetY1(0);
+    setOffsetY2(0);
+    setCloseness(0);
+    setIsSwapped(false);
+  };
+
+  // Render live composite on HTML5 Canvas
+  const drawComposite = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !person1Transparent || !person2Transparent) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Determine dimensions based on aspect ratio
+    let targetW = 800;
+    let targetH = 600; // 4:3
+
+    if (aspectRatio === "4:5") {
+      targetW = 640;
+      targetH = 800;
+    } else if (aspectRatio === "1:1") {
+      targetW = 700;
+      targetH = 700;
+    }
+
+    canvas.width = targetW;
+    canvas.height = targetH;
+
+    // 1. Draw Background
+    ctx.clearRect(0, 0, targetW, targetH);
+
+    if (selectedBg === "blue") {
+      ctx.fillStyle = "#BAE6FD"; // BD Studio Sky Blue
+      ctx.fillRect(0, 0, targetW, targetH);
+    } else if (selectedBg === "white") {
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, targetW, targetH);
+    } else if (selectedBg === "gray") {
+      ctx.fillStyle = "#E5E7EB";
+      ctx.fillRect(0, 0, targetW, targetH);
+    } else if (selectedBg === "dark") {
+      ctx.fillStyle = "#0F172A";
+      ctx.fillRect(0, 0, targetW, targetH);
+    } else if (selectedBg === "gradient_purple") {
+      const grad = ctx.createLinearGradient(0, 0, targetW, targetH);
+      grad.addColorStop(0, "#4F46E5");
+      grad.addColorStop(1, "#9333EA");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, targetW, targetH);
+    } else if (selectedBg === "gradient_warm") {
+      const grad = ctx.createLinearGradient(0, 0, targetW, targetH);
+      grad.addColorStop(0, "#F97316");
+      grad.addColorStop(1, "#EC4899");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, targetW, targetH);
+    } else if (selectedBg === "transparent") {
+      // Checkerboard pattern for transparent preview
+      const size = 16;
+      for (let y = 0; y < targetH; y += size) {
+        for (let x = 0; x < targetW; x += size) {
+          ctx.fillStyle = (x / size + y / size) % 2 === 0 ? "#E2E8F0" : "#CBD5E1";
+          ctx.fillRect(x, y, size, size);
+        }
+      }
+    }
+
+    // 2. Load and draw both transparent subject images
+    const imgA = new Image();
+    const imgB = new Image();
+
+    const src1 = isSwapped ? person2Transparent : person1Transparent;
+    const src2 = isSwapped ? person1Transparent : person2Transparent;
+
+    const s1 = isSwapped ? scale2 : scale1;
+    const s2 = isSwapped ? scale1 : scale2;
+
+    const yOff1 = isSwapped ? offsetY2 : offsetY1;
+    const yOff2 = isSwapped ? offsetY1 : offsetY2;
+
+    let loadedCount = 0;
+    const onLoad = () => {
+      loadedCount++;
+      if (loadedCount === 2) {
+        const baseH = targetH * 0.95;
+
+        // Subject 1 (Left)
+        const h1 = baseH * s1;
+        const w1 = (imgA.width / imgA.height) * h1;
+
+        // Subject 2 (Right)
+        const h2 = baseH * s2;
+        const w2 = (imgB.width / imgB.height) * h2;
+
+        // Placement centers
+        const centerX = targetW / 2;
+        // Default spacing puts left person around centerX - 130 and right person at centerX + 130
+        const separation = 130 - closeness * 0.8;
+
+        const posX1 = centerX - separation - w1 / 2;
+        const posY1 = targetH - h1 + yOff1;
+
+        const posX2 = centerX + separation - w2 / 2;
+        const posY2 = targetH - h2 + yOff2;
+
+        const renderLeft = () => {
+          ctx.drawImage(imgA, posX1, posY1, w1, h1);
+        };
+
+        const renderRight = () => {
+          ctx.drawImage(imgB, posX2, posY2, w2, h2);
+        };
+
+        if (layerOrder === "2_over_1") {
+          // Left person first, right person overlaps on top
+          renderLeft();
+          renderRight();
+        } else {
+          // Right person first, left person overlaps on top
+          renderRight();
+          renderLeft();
+        }
+
+        // 3. Optional Guidelines overlay
+        if (showGuidelines) {
+          ctx.strokeStyle = "rgba(16, 185, 129, 0.6)";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([6, 6]);
+
+          // Eye level line (around 35% from top)
+          const eyeY = targetH * 0.35;
+          ctx.beginPath();
+          ctx.moveTo(0, eyeY);
+          ctx.lineTo(targetW, eyeY);
+          ctx.stroke();
+
+          // Chin level line (around 58% from top)
+          const chinY = targetH * 0.58;
+          ctx.beginPath();
+          ctx.moveTo(0, chinY);
+          ctx.lineTo(targetW, chinY);
+          ctx.stroke();
+
+          // Center divider
+          ctx.beginPath();
+          ctx.moveTo(targetW / 2, 0);
+          ctx.lineTo(targetW / 2, targetH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+    };
+
+    imgA.onload = onLoad;
+    imgB.onload = onLoad;
+    imgA.src = src1;
+    imgB.src = src2;
+  }, [
+    person1Transparent,
+    person2Transparent,
+    selectedBg,
+    aspectRatio,
+    scale1,
+    scale2,
+    offsetY1,
+    offsetY2,
+    closeness,
+    isSwapped,
+    layerOrder,
+    showGuidelines,
+  ]);
+
+  useEffect(() => {
+    if (person1Transparent && person2Transparent) {
+      drawComposite();
+    }
+  }, [drawComposite, person1Transparent, person2Transparent]);
+
+  const handleExport = async (format: "single_jpg" | "single_png" | "sheet_4x6") => {
+    if (!person1Transparent || !person2Transparent) return;
+
+    setIsExporting(true);
+    try {
+      const src1 = isSwapped ? person2Transparent : person1Transparent;
+      const src2 = isSwapped ? person1Transparent : person2Transparent;
+
+      const s1 = isSwapped ? scale2 : scale1;
+      const s2 = isSwapped ? scale1 : scale2;
+
+      const yOff1 = isSwapped ? offsetY2 : offsetY1;
+      const yOff2 = isSwapped ? offsetY1 : offsetY2;
+
+      const separation = 130 - closeness * 0.8;
+
+      const res = await fetch("/api/export-joint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image1: src1,
+          image2: src2,
+          person1: { scale: s1, offsetX: -separation, offsetY: yOff1 },
+          person2: { scale: s2, offsetX: separation, offsetY: yOff2 },
+          layerOrder,
+          bgColor: selectedBg,
+          aspectRatio,
+          format,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to export joint photo.");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+
+      let filename = `pixelforge-joint-portrait-${Date.now()}.${format === "single_png" ? "png" : "jpg"}`;
+      if (format === "sheet_4x6") {
+        filename = `pixelforge-joint-4x6-print-sheet-${Date.now()}.jpg`;
+      }
+
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      setErrorText("Failed to generate master download file.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const backdrops: Array<{ id: BackdropType; label: string; grad: string; hex?: string }> = [
+    { id: "blue", label: "BD Studio Sky Blue", grad: "from-sky-300 via-blue-300 to-cyan-200" },
+    { id: "white", label: "Passport White", grad: "from-slate-100 via-white to-slate-200" },
+    { id: "gray", label: "Studio Gray", grad: "from-slate-200 via-gray-300 to-zinc-400" },
+    { id: "dark", label: "Dark Studio", grad: "from-slate-800 via-zinc-900 to-black" },
+    { id: "gradient_purple", label: "Royal Indigo", grad: "from-indigo-600 via-purple-600 to-pink-600" },
+    { id: "gradient_warm", label: "Sunset Glow", grad: "from-orange-500 via-amber-500 to-rose-500" },
+    { id: "transparent", label: "Transparent HD", grad: "from-slate-300 via-slate-400 to-slate-300 dark:from-zinc-700 dark:via-zinc-800 dark:to-zinc-700" },
+  ];
+
+  return (
+    <div className="relative min-h-[calc(100vh-80px)] w-full overflow-hidden flex flex-col items-center justify-start p-4 md:p-8">
+      {mounted && <Spotlight className="-top-40 left-0 md:left-40 md:-top-20" fill={resolvedTheme === "dark" ? "white" : "black"} />}
+
+      <div className="z-10 w-full max-w-6xl flex flex-col items-center gap-8">
+        
+        {/* Header */}
+        {!person1Transparent && (
+          <div className="text-center space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-mono text-primary mb-2">
+              <Users className="w-3.5 h-3.5" />
+              2-Picture Joint Studio Photo (যৌথ ছবি)
+            </div>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground">
+              2-Picture Joint Studio
+            </h1>
+            <p className="text-muted-foreground md:text-lg max-w-2xl mx-auto font-light">
+              Upload two individual photos. AI automatically isolates both people, levels eye lines, matches lighting, and attaches them into a unified studio joint photo.
+            </p>
+
+            {/* Model status bar */}
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                onClick={() => setIsKeyModalOpen(true)}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-border/60 bg-card/60 backdrop-blur-md text-xs hover:border-primary/40 transition-colors"
+              >
+                <span className="w-2 h-2 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 shadow-sm" />
+                <span>Active Model: <strong className="text-foreground font-mono">{selectedModel}</strong></span>
+                {!apiKey && <span className="text-[10px] text-amber-500 font-bold ml-1">(Click to add API Key)</span>}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error Alert */}
+        {errorText && (
+          <div className="w-full max-w-3xl p-4 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
+            {errorText}
+          </div>
+        )}
+
+        {/* Stage 1: Upload 2 Individual Photos */}
+        {!person1Transparent ? (
+          <div className="w-full space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto">
+              
+              {/* Box 1: Person 1 */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 shadow-[0_0_8px_rgba(168,85,247,0.6)] ring-1 ring-white/20 shrink-0" />
+                    Person 1 (Left / e.g. Groom / Husband)
+                  </span>
+                  {image1Url && (
+                    <button
+                      onClick={() => setImage1Url(null)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Change
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative rounded-3xl border border-border bg-card/40 backdrop-blur-xl p-3 shadow-xl min-h-[320px] flex items-center justify-center overflow-hidden">
+                  {isConverting1 ? (
+                    <div className="flex flex-col items-center justify-center gap-2 text-primary animate-pulse">
+                      <Sparkles className="w-8 h-8 animate-spin" />
+                      <span className="text-xs font-mono font-medium">Preparing image...</span>
+                    </div>
+                  ) : image1Url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={image1Url}
+                      alt="Person 1"
+                      className="max-h-[300px] w-full object-contain rounded-2xl animate-in fade-in"
+                    />
+                  ) : (
+                    <UploadZone
+                      onFileSelect={handleUpload1}
+                      title="Drop Person 1 Photo"
+                      description="Upload left person portrait (JPG, PNG, HEIC)"
+                      className="w-full h-full min-h-[280px] border-dashed border-border/60 rounded-2xl bg-transparent"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Box 2: Person 2 */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-400 shadow-[0_0_8px_rgba(59,130,246,0.6)] ring-1 ring-white/20 shrink-0" />
+                    Person 2 (Right / e.g. Bride / Wife)
+                  </span>
+                  {image2Url && (
+                    <button
+                      onClick={() => setImage2Url(null)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Change
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative rounded-3xl border border-border bg-card/40 backdrop-blur-xl p-3 shadow-xl min-h-[320px] flex items-center justify-center overflow-hidden">
+                  {isConverting2 ? (
+                    <div className="flex flex-col items-center justify-center gap-2 text-indigo-400 animate-pulse">
+                      <Sparkles className="w-8 h-8 animate-spin" />
+                      <span className="text-xs font-mono font-medium">Preparing image...</span>
+                    </div>
+                  ) : image2Url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={image2Url}
+                      alt="Person 2"
+                      className="max-h-[300px] w-full object-contain rounded-2xl animate-in fade-in"
+                    />
+                  ) : (
+                    <UploadZone
+                      onFileSelect={handleUpload2}
+                      title="Drop Person 2 Photo"
+                      description="Upload right person portrait (JPG, PNG, HEIC)"
+                      className="w-full h-full min-h-[280px] border-dashed border-border/60 rounded-2xl bg-transparent"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Launch Action */}
+            <div className="flex justify-center pt-2">
+              <Button
+                size="lg"
+                onClick={startJointGeneration}
+                disabled={isProcessing || isConverting1 || isConverting2 || !image1Url || !image2Url}
+                className="h-16 px-10 rounded-2xl text-base font-bold shadow-2xl hover:shadow-primary/30 transition-all hover:scale-[1.02]"
+              >
+                {isProcessing ? (
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 animate-spin" />
+                    Extracting & Fusing Both Subjects...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    Attach & Create Joint Studio Photo
+                    <ArrowRight className="w-5 h-5 ml-1" />
+                  </span>
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          /* Stage 2: Interactive Live Studio Joint Photo Editor */
+          <div className="w-full max-w-6xl space-y-8 animate-in zoom-in-95 duration-500">
+            
+            <div className="grid lg:grid-cols-[1fr_360px] gap-8 items-start">
+              
+              {/* Left Column: Live Canvas Preview */}
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-full rounded-3xl border border-border bg-card/40 backdrop-blur-2xl p-6 shadow-2xl flex flex-col items-center justify-center min-h-[480px]">
+                  
+                  <div className="flex items-center justify-between w-full mb-4">
+                    <span className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 shadow-sm" />
+                      Live Studio Joint Canvas
+                    </span>
+
+                    <button
+                      onClick={() => setShowGuidelines(!showGuidelines)}
+                      className="text-xs text-primary hover:underline flex items-center gap-1 font-mono"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      {showGuidelines ? "Hide Eye/Head Guides" : "Show Eye/Head Guides"}
+                    </button>
+                  </div>
+
+                  <div className="relative rounded-2xl overflow-hidden border-2 border-border/80 shadow-2xl max-w-full flex items-center justify-center bg-black/10">
+                    <canvas
+                      ref={canvasRef}
+                      className="max-h-[460px] w-auto max-w-full object-contain"
+                    />
+                  </div>
+                </div>
+
+                {/* AI Retoucher Advice Note */}
+                {aiAnalysis && (
+                  <div className="w-full p-4 rounded-2xl border border-primary/20 bg-primary/5 backdrop-blur-xl flex items-start gap-3 text-xs">
+                    <Bot className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <strong className="text-primary font-mono uppercase tracking-wider">AI Studio Retoucher Note</strong>
+                      <p className="text-muted-foreground whitespace-pre-line leading-relaxed font-light">{aiAnalysis}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: Studio Controls Panel */}
+              <div className="flex flex-col gap-6 p-6 rounded-3xl border border-border bg-card/60 backdrop-blur-2xl shadow-2xl">
+                
+                {/* 1. Backdrop Selector */}
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-foreground mb-3 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-sky-400 to-blue-500 shadow-sm" />
+                    Studio Backdrop Color
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {backdrops.map((b) => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => setSelectedBg(b.id)}
+                        className={cn(
+                          "p-2 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition-all",
+                          selectedBg === b.id
+                            ? "border-primary bg-primary/10 ring-1 ring-primary shadow-sm"
+                            : "border-border/60 bg-background/40 hover:bg-muted/40"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "w-4 h-4 rounded-full border border-black/10 shrink-0 bg-gradient-to-br shadow-sm ring-1 ring-white/20",
+                              b.grad
+                            )}
+                          />
+                          <span className="truncate text-[11px] text-foreground">{b.label}</span>
+                        </div>
+                        {selectedBg === b.id && <Check className="w-3 h-3 text-primary" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Position & Layering Actions */}
+                <div className="space-y-3 pt-2 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      Arrangement & Depth
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsSwapped(!isSwapped)}
+                      className="rounded-xl h-10 text-xs font-semibold border-border bg-background/40"
+                    >
+                      <ArrowLeftRight className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                      Swap Sides (L ⇋ R)
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setLayerOrder(layerOrder === "1_over_2" ? "2_over_1" : "1_over_2")}
+                      className="rounded-xl h-10 text-xs font-semibold border-border bg-background/40"
+                    >
+                      <Layers className="w-3.5 h-3.5 mr-1.5 text-indigo-400" />
+                      {layerOrder === "1_over_2" ? "Left in Front" : "Right in Front"}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 3. Spacing & Closeness Slider */}
+                <div className="space-y-1.5 pt-2 border-t border-border/50">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span className="text-foreground">Shoulder Spacing / Closeness</span>
+                    <span className="font-mono text-primary font-bold">{closeness > 0 ? `+${closeness}` : closeness}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-60}
+                    max={80}
+                    value={closeness}
+                    onChange={(e) => setCloseness(Number(e.target.value))}
+                    className="w-full accent-primary"
+                  />
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>Farther</span>
+                    <span>Closer / Overlap</span>
+                  </div>
+                </div>
+
+                {/* 4. Person 1 Adjustments (Left) */}
+                <div className="p-3.5 rounded-2xl bg-background/40 border border-border/60 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-bold text-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500" />
+                      {isSwapped ? "Person 2 (Now Left)" : "Person 1 (Left)"}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
+                      <span>Head Size / Scale</span>
+                      <span className="text-foreground font-bold">{(scale1 * 100).toFixed(0)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0.8}
+                      max={1.3}
+                      step={0.02}
+                      value={scale1}
+                      onChange={(e) => setScale1(Number(e.target.value))}
+                      className="w-full accent-purple-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
+                      <span>Vertical Height (Eye Level)</span>
+                      <span className="text-foreground font-bold">{offsetY1}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={-80}
+                      max={80}
+                      value={offsetY1}
+                      onChange={(e) => setOffsetY1(Number(e.target.value))}
+                      className="w-full accent-purple-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 5. Person 2 Adjustments (Right) */}
+                <div className="p-3.5 rounded-2xl bg-background/40 border border-border/60 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-bold text-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-400" />
+                      {isSwapped ? "Person 1 (Now Right)" : "Person 2 (Right)"}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
+                      <span>Head Size / Scale</span>
+                      <span className="text-foreground font-bold">{(scale2 * 100).toFixed(0)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0.8}
+                      max={1.3}
+                      step={0.02}
+                      value={scale2}
+                      onChange={(e) => setScale2(Number(e.target.value))}
+                      className="w-full accent-blue-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
+                      <span>Vertical Height (Eye Level)</span>
+                      <span className="text-foreground font-bold">{offsetY2}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={-80}
+                      max={80}
+                      value={offsetY2}
+                      onChange={(e) => setOffsetY2(Number(e.target.value))}
+                      className="w-full accent-blue-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 6. Export Actions */}
+                <div className="space-y-2.5 pt-2 border-t border-border/50">
+                  <Button
+                    size="lg"
+                    onClick={() => handleExport("single_jpg")}
+                    disabled={isExporting}
+                    className="w-full h-12 rounded-2xl font-bold text-sm shadow-xl hover:shadow-primary/30"
+                  >
+                    <Download className="w-4 h-4 mr-2" /> Download Master Joint Photo (JPG)
+                  </Button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleExport("single_png")}
+                      disabled={isExporting}
+                      className="rounded-xl h-10 text-xs font-semibold border-border bg-background/50"
+                    >
+                      <FileImage className="w-3.5 h-3.5 mr-1.5 text-emerald-400" /> PNG Format
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleExport("sheet_4x6")}
+                      disabled={isExporting}
+                      className="rounded-xl h-10 text-xs font-semibold border-border bg-background/50"
+                    >
+                      <Layers className="w-3.5 h-3.5 mr-1.5 text-primary" /> 4×6&quot; Print Sheet
+                    </Button>
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetAll}
+                    className="w-full h-9 rounded-xl text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1.5" /> Start With New Photos
+                  </Button>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
