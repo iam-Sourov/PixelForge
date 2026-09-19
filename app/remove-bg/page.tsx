@@ -17,6 +17,7 @@ import { Spotlight } from "@/components/ui/spotlight";
 import { useTheme } from "next-themes";
 import { cn, fixExifOrientation } from "@/lib/utils";
 import { processImageForClient } from "@/lib/image-client";
+import { removeBackgroundClient } from "@/lib/bg-client";
 
 const blobToBase64 = (blob: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -33,6 +34,7 @@ export default function RemoveBgPage() {
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string>("Segmenting Subject & Matting Edges...");
   const [errorText, setErrorText] = useState<string | null>(null);
   const [selectedBg, setSelectedBg] = useState<BgOption>("transparent");
   const [customColor, setCustomColor] = useState("#FFFFFF");
@@ -46,6 +48,7 @@ export default function RemoveBgPage() {
     setErrorText(null);
     setIsProcessing(true);
     setResultUrl(null);
+    setStatusMessage("Analyzing image & loading AI model...");
     
     try {
       const processed = await processImageForClient(file);
@@ -55,22 +58,13 @@ export default function RemoveBgPage() {
       const originalObjectUrl = URL.createObjectURL(processed);
       setOriginalUrl(originalObjectUrl);
 
-      const base64data = await blobToBase64(processed);
-
-      const res = await fetch("/api/remove-bg", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64data }),
+      const cutoutDataUrl = await removeBackgroundClient(processed, (msg) => {
+        setStatusMessage(msg);
       });
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Failed to extract background.");
-      }
-
-      const data = await res.json();
-      setResultUrl(data.resultImage);
+      setResultUrl(cutoutDataUrl);
     } catch (e: unknown) {
+      console.error("Background removal error:", e);
       setErrorText(e instanceof Error ? e.message : "Failed to extract background. Please try again.");
     } finally {
       setIsProcessing(false);
@@ -205,13 +199,13 @@ export default function RemoveBgPage() {
                 )}
               >
                 {isProcessing && (
-                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/60 backdrop-blur-md">
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/70 backdrop-blur-md p-6 text-center">
                     <div className="relative flex h-20 w-20 items-center justify-center">
                       <div className="absolute inset-0 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                       <Sparkles className="h-6 w-6 text-primary animate-pulse" />
                     </div>
-                    <p className="mt-4 text-xs font-mono tracking-widest uppercase text-primary font-bold">
-                      Segmenting Subject & Matting Edges...
+                    <p className="mt-4 text-xs font-mono tracking-wider uppercase text-primary font-bold max-w-xs animate-pulse">
+                      {statusMessage}
                     </p>
                   </div>
                 )}

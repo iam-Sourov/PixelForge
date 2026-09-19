@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { processImageForClient } from "@/lib/image-client";
+import { removeBackgroundClient } from "@/lib/bg-client";
 import { motion } from "framer-motion";
 
 type BackdropType = "blue" | "white" | "gray" | "dark" | "gradient_purple" | "gradient_warm" | "transparent";
@@ -39,6 +40,7 @@ export default function DualAdjustPage() {
 
   // Studio adjustment state
   const [isProcessing, setIsProcessing] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("Extracting & Fusing Both Subjects...");
   const [isConverting1, setIsConverting1] = useState(false);
   const [isConverting2, setIsConverting2] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -122,33 +124,65 @@ export default function DualAdjustPage() {
     setIsProcessing(true);
     setErrorText(null);
     setAiAnalysis(null);
+    setStatusMessage("Extracting Person 1 foreground subject...");
 
     try {
       const b64_1 = await toBase64(image1Url);
       const b64_2 = await toBase64(image2Url);
 
-      const res = await fetch("/api/gemini/adjust-dual", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image1: b64_1,
-          image2: b64_2,
-          apiKey,
-          model: selectedModel,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        throw new Error(data.error || "Failed to isolate subjects for joint photo.");
+      // 1. Isolate Person 1
+      let p1Cutout = "";
+      try {
+        setStatusMessage("Isolating Person 1 with AI...");
+        p1Cutout = await removeBackgroundClient(b64_1, (msg) => {
+          setStatusMessage(`Person 1: ${msg}`);
+        });
+      } catch (e1) {
+        console.warn("Person 1 cutout fallback:", e1);
+        p1Cutout = b64_1;
       }
 
-      setPerson1Transparent(data.person1Transparent);
-      setPerson2Transparent(data.person2Transparent);
-      if (data.aiAnalysis) setAiAnalysis(data.aiAnalysis);
+      // 2. Isolate Person 2
+      let p2Cutout = "";
+      try {
+        setStatusMessage("Isolating Person 2 with AI...");
+        p2Cutout = await removeBackgroundClient(b64_2, (msg) => {
+          setStatusMessage(`Person 2: ${msg}`);
+        });
+      } catch (e2) {
+        console.warn("Person 2 cutout fallback:", e2);
+        p2Cutout = b64_2;
+      }
+
+      setPerson1Transparent(p1Cutout);
+      setPerson2Transparent(p2Cutout);
+
+      // 3. Call server for Gemini lighting harmonization if available
+      try {
+        setStatusMessage("Analyzing studio color harmony & alignment...");
+        const res = await fetch("/api/gemini/adjust-dual", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            image1: b64_1,
+            image2: b64_2,
+            person1Transparent: p1Cutout,
+            person2Transparent: p2Cutout,
+            apiKey,
+            model: selectedModel,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.aiAnalysis) setAiAnalysis(data.aiAnalysis);
+        }
+      } catch (geminiErr) {
+        console.warn("Gemini harmonization note:", geminiErr);
+      }
     } catch (e: unknown) {
       console.error(e);
-      setErrorText(e instanceof Error ? e.message : "Error isolating subjects. Please try again.");
+      setErrorText(e instanceof Error ? e.message : "Error preparing joint photo. Please try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -551,7 +585,7 @@ export default function DualAdjustPage() {
                 {isProcessing ? (
                   <span className="flex items-center gap-2">
                     <Sparkles className="w-5 h-5 animate-spin" />
-                    Extracting & Fusing Both Subjects...
+                    {statusMessage}
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">

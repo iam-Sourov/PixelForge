@@ -5,8 +5,10 @@ import { normalizeImageBuffer } from "@/lib/image-buffer";
 import { birefnetBridge } from "@/lib/birefnet-bridge";
 
 interface DualJoinRequest {
-  image1: string; // Base64 of Person 1 (Raw or Clean)
-  image2: string; // Base64 of Person 2 (Raw or Clean)
+  image1: string; // Base64 of Person 1 (Raw or Cutout)
+  image2: string; // Base64 of Person 2 (Raw or Cutout)
+  person1Transparent?: string;
+  person2Transparent?: string;
   apiKey?: string;
   model?: string;
 }
@@ -22,7 +24,14 @@ const cleanBase64 = (b64: string): { data: string; mimeType: string } => {
 export async function POST(req: NextRequest) {
   try {
     const body: DualJoinRequest = await req.json();
-    const { image1, image2, apiKey, model = "gemini-2.5-pro" } = body;
+    const { 
+      image1, 
+      image2, 
+      person1Transparent: p1TransInput,
+      person2Transparent: p2TransInput,
+      apiKey, 
+      model = "gemini-2.5-pro" 
+    } = body;
 
     if (!image1 || !image2) {
       return NextResponse.json(
@@ -43,13 +52,28 @@ export async function POST(req: NextRequest) {
     const normB64_1 = `data:image/png;base64,${normBuf1.toString("base64")}`;
     const normB64_2 = `data:image/png;base64,${normBuf2.toString("base64")}`;
 
-    console.log("[Joint Photo] Extracting backgrounds for Person 1 and Person 2 in parallel...");
+    let person1Transparent = p1TransInput || "";
+    let person2Transparent = p2TransInput || "";
 
-    // 1. Extract backgrounds for both persons concurrently using BiRefNet
-    const [person1Transparent, person2Transparent] = await Promise.all([
-      birefnetBridge.removeBackground(normB64_1),
-      birefnetBridge.removeBackground(normB64_2),
-    ]);
+    // 1. If cutouts were not already provided from the client, try extracting
+    if (!person1Transparent || !person2Transparent) {
+      if (!process.env.VERCEL) {
+        try {
+          const [p1, p2] = await Promise.all([
+            person1Transparent ? Promise.resolve(person1Transparent) : birefnetBridge.removeBackground(normB64_1),
+            person2Transparent ? Promise.resolve(person2Transparent) : birefnetBridge.removeBackground(normB64_2),
+          ]);
+          person1Transparent = p1;
+          person2Transparent = p2;
+        } catch (bridgeErr) {
+          console.warn("[Joint API] Background bridge note:", bridgeErr);
+        }
+      }
+
+      // Fallback to normalized original photos if background removal was unavailable
+      if (!person1Transparent) person1Transparent = normB64_1;
+      if (!person2Transparent) person2Transparent = normB64_2;
+    }
 
     let aiAnalysis = "Studio subject isolation completed. Adjust positioning, head scales, and backdrop in the studio editor.";
 

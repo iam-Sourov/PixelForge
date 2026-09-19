@@ -18,6 +18,7 @@ import {
 import { Spotlight } from "@/components/ui/spotlight";
 import { cn, fixExifOrientation } from "@/lib/utils";
 import { processImageForClient } from "@/lib/image-client";
+import { removeBackgroundClient } from "@/lib/bg-client";
 import { useTheme } from "next-themes";
 import Cropper, { Area } from "react-easy-crop";
 
@@ -35,6 +36,7 @@ type PresetType = "bd_passport" | "bd_stamp" | "bd_epassport";
 export default function PassportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isProcessingBg, setIsProcessingBg] = useState(false);
+  const [bgStatusMessage, setBgStatusMessage] = useState("Isolating subject for passport background...");
   const [transparentUrl, setTransparentUrl] = useState<string | null>(null);
   const [transparentBlob, setTransparentBlob] = useState<Blob | null>(null);
 
@@ -72,6 +74,7 @@ export default function PassportPage() {
     setErrorText(null);
     setCrop({ x: 0, y: 0 });
     setZoom(1);
+    setBgStatusMessage("Analyzing passport photo & isolating subject...");
 
     if (transparentUrl) {
       URL.revokeObjectURL(transparentUrl);
@@ -81,27 +84,26 @@ export default function PassportPage() {
     try {
       const processed = await processImageForClient(selectedFile);
       setFile(processed);
-      const base64data = await blobToBase64(processed);
 
-      const res = await fetch("/api/remove-bg", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64data }),
-      });
+      try {
+        const cutoutDataUrl = await removeBackgroundClient(processed, (msg) => {
+          setBgStatusMessage(msg);
+        });
+        const base64Response = await fetch(cutoutDataUrl);
+        const blob = await base64Response.blob();
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Failed to process image.");
+        setTransparentBlob(blob);
+        const tUrl = URL.createObjectURL(blob);
+        setTransparentUrl(tUrl);
+      } catch (bgErr) {
+        console.warn("Background removal error in passport studio, using original photo:", bgErr);
+        // Fallback to original photo directly so user is never blocked
+        setTransparentBlob(processed);
+        const tUrl = URL.createObjectURL(processed);
+        setTransparentUrl(tUrl);
       }
-
-      const data = await res.json();
-      const base64Response = await fetch(data.resultImage);
-      const blob = await base64Response.blob();
-
-      setTransparentBlob(blob);
-      const tUrl = URL.createObjectURL(blob);
-      setTransparentUrl(tUrl);
     } catch (e: unknown) {
+      console.error(e);
       setErrorText(e instanceof Error ? e.message : "Failed to process image.");
     } finally {
       setIsProcessingBg(false);
@@ -226,13 +228,13 @@ export default function PassportPage() {
 
         {/* Processing Spinner */}
         {isProcessingBg && (
-          <div className="flex flex-col items-center justify-center p-16 space-y-4">
+          <div className="flex flex-col items-center justify-center p-16 space-y-4 text-center">
             <div className="relative flex h-20 w-20 items-center justify-center">
               <div className="absolute inset-0 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
               <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-md animate-pulse" />
             </div>
-            <p className="font-mono text-xs tracking-widest uppercase text-emerald-400 font-bold">
-              Extracting Foreground Subject with AI...
+            <p className="font-mono text-xs tracking-wider uppercase text-emerald-500 dark:text-emerald-400 font-bold max-w-sm animate-pulse">
+              {bgStatusMessage}
             </p>
           </div>
         )}

@@ -261,11 +261,16 @@ export async function POST(req: NextRequest) {
 
     // 2. If no cloud result, run local Python/Node enhancer
     if (!enhancedBase64) {
-      const scriptPath = path.join(process.cwd(), "lib", "enhancer.py");
-      try {
-        enhancedBase64 = await runPythonEnhancer(imageBuffer, scriptPath);
-      } catch (pythonError: unknown) {
+      if (process.env.VERCEL) {
+        // Direct ultra-fast Sharp + Node enhancer in Vercel serverless environment
         enhancedBase64 = await runNodeEnhancer(imageBuffer);
+      } else {
+        const scriptPath = path.join(process.cwd(), "lib", "enhancer.py");
+        try {
+          enhancedBase64 = await runPythonEnhancer(imageBuffer, scriptPath);
+        } catch (pythonError: unknown) {
+          enhancedBase64 = await runNodeEnhancer(imageBuffer);
+        }
       }
     }
 

@@ -9,6 +9,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
     }
 
+    if (process.env.VERCEL) {
+      // In Vercel serverless environment, background removal is executed via WebAssembly on the client
+      return NextResponse.json({ 
+        error: "Serverless environment detected. Please use client-side AI matting.",
+        useClientMatting: true 
+      }, { status: 503 });
+    }
+
     console.log("[API /api/remove-bg] Processing image via BiRefNet bridge...");
     const startTime = Date.now();
     
@@ -19,10 +27,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ resultImage });
   } catch (err: any) {
-    console.error("[API /api/remove-bg] Error processing image:", err);
+    console.warn("[API /api/remove-bg] Server background removal unavailable:", err?.message || err);
     return NextResponse.json({ 
-      error: "Background removal failed", 
-      details: err.message || String(err) 
-    }, { status: 500 });
+      error: "Background removal engine unavailable on server", 
+      details: err?.message || String(err),
+      useClientMatting: true
+    }, { status: 503 });
   }
 }
