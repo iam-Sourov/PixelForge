@@ -33,7 +33,7 @@ class BiRefNetBridge {
           this.processBuffer();
         });
 
-        p.on("error", (err: any) => {
+        p.on("error", (err: NodeJS.ErrnoException) => {
           if (cmd === "python3" && err.code === "ENOENT") {
             console.warn("[BiRefNetBridge] python3 not found, trying python...");
             trySpawn("python");
@@ -101,7 +101,7 @@ class BiRefNetBridge {
     this.proc = null;
     this.initializingPromise = null;
     // Reject all pending resolvers
-    for (const [_, handler] of this.resolvers.entries()) {
+    for (const handler of this.resolvers.values()) {
       handler.reject(err);
     }
     this.resolvers.clear();

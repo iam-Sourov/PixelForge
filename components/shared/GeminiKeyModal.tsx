@@ -14,11 +14,11 @@ import {
   ShieldCheck, 
   X, 
   Zap,
-  Layers,
   ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useMounted } from "@/lib/use-mounted";
 import confetti from "canvas-confetti";
 
 export function GeminiKeyModal() {
@@ -42,13 +42,7 @@ export function GeminiKeyModal() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [localModels, setLocalModels] = useState<GeminiModelInfo[]>(availableModels);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    setInputKey(apiKey || "");
-    setLocalModels(availableModels);
-  }, [apiKey, availableModels]);
+  const mounted = useMounted();
 
   // Initial onboarding trigger
   useEffect(() => {
@@ -62,6 +56,8 @@ export function GeminiKeyModal() {
   }, [mounted, hasPromptedInitial, apiKey, setIsKeyModalOpen, setHasPromptedInitial]);
 
   if (!mounted || !isKeyModalOpen) return null;
+
+  const displayModels = localModels.length > 0 ? localModels : availableModels;
 
   const handleValidate = async () => {
     if (!inputKey.trim()) {
@@ -82,7 +78,7 @@ export function GeminiKeyModal() {
           spread: 60,
           origin: { y: 0.6 },
         });
-      } catch (e) {
+      } catch {
         // ignore
       }
     } else {
@@ -91,7 +87,7 @@ export function GeminiKeyModal() {
   };
 
   const handleSaveAndClose = () => {
-    if (inputKey.trim() && localModels.length > 0) {
+    if (inputKey.trim()) {
       setApiKey(inputKey.trim());
     }
     setIsKeyModalOpen(false);
@@ -204,12 +200,12 @@ export function GeminiKeyModal() {
           )}
 
           {/* Discovered Models List & Selection */}
-          {localModels.length > 0 && (
+          {displayModels.length > 0 && (
             <div className="space-y-3 pt-2 border-t border-border/50">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
                   <Cpu className="w-4 h-4 text-primary" />
-                  Select Active Gemini Model ({localModels.length} available)
+                  Select Active Gemini Model ({displayModels.length} available)
                 </label>
                 <span className="text-[11px] text-muted-foreground">
                   Using: <strong className="text-foreground font-mono">{selectedModel}</strong>
@@ -217,7 +213,7 @@ export function GeminiKeyModal() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                {localModels.map((m) => {
+                {displayModels.map((m) => {
                   const isSelected = selectedModel === m.id;
                   return (
                     <button

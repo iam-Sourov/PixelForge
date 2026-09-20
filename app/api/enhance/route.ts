@@ -4,11 +4,7 @@ import path from "path";
 import sharp from "sharp";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { normalizeImageBuffer } from "@/lib/image-buffer";
-import { 
-  bilateralFilterDenoise, 
-  frequencySeparation, 
-  microSharpen 
-} from "@/lib/image-math";
+import { bilateralFilterDenoise } from "@/lib/image-math";
 
 // ImageData polyfill for Node.js backend environment
 if (typeof globalThis.ImageData === "undefined") {
@@ -87,7 +83,7 @@ async function runGeminiEnhancer(
   }
 
   // Apply high quality neural tone & texture remastering using Sharp
-  let pipeline = sharp(imageBuffer)
+  const pipeline = sharp(imageBuffer)
     .modulate({
       brightness: Math.min(1.4, Math.max(0.8, multipliers.brightness)),
       saturation: Math.min(1.4, Math.max(0.8, multipliers.saturation)),
@@ -198,7 +194,7 @@ async function runNodeEnhancer(imageBuffer: Buffer): Promise<string> {
     .toBuffer({ resolveWithObject: true });
 
   const rawData = new Uint8ClampedArray(data);
-  let imgData = new ImageData(rawData, info.width, info.height);
+  const imgData = new ImageData(rawData, info.width, info.height);
 
   const smoothed = bilateralFilterDenoise(imgData, 3.0, 15.0);
   for (let i = 0; i < imgData.data.length; i += 4) {
@@ -268,7 +264,7 @@ export async function POST(req: NextRequest) {
         const scriptPath = path.join(process.cwd(), "lib", "enhancer.py");
         try {
           enhancedBase64 = await runPythonEnhancer(imageBuffer, scriptPath);
-        } catch (pythonError: unknown) {
+        } catch {
           enhancedBase64 = await runNodeEnhancer(imageBuffer);
         }
       }

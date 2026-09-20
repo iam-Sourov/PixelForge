@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import sharp from "sharp";
 import { normalizeImageBuffer } from "@/lib/image-buffer";
 import { birefnetBridge } from "@/lib/birefnet-bridge";
 

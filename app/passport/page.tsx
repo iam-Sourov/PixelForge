@@ -1,35 +1,24 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { UploadZone } from "@/components/shared/UploadZone";
 import { Button } from "@/components/ui/button";
 import { 
   Download, 
   RefreshCw, 
-  Sparkles, 
   Check, 
   Grid3X3, 
   Layers, 
-  ScanFace,
   FileImage,
-  Eye,
-  Sliders
+  Eye
 } from "lucide-react";
 import { Spotlight } from "@/components/ui/spotlight";
-import { cn, fixExifOrientation } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { useMounted } from "@/lib/use-mounted";
 import { processImageForClient } from "@/lib/image-client";
 import { removeBackgroundClient } from "@/lib/bg-client";
 import { useTheme } from "next-themes";
 import Cropper, { Area } from "react-easy-crop";
-
-const blobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
 
 type PresetType = "bd_passport" | "bd_stamp" | "bd_epassport";
 
@@ -45,15 +34,13 @@ export default function PassportPage() {
   const [showGuidelines, setShowGuidelines] = useState(true);
   const [errorText, setErrorText] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
 
   // Editor states
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-
-  useEffect(() => setMounted(true), []);
 
   // Compute aspect ratio based on preset
   const getAspectRatio = () => {

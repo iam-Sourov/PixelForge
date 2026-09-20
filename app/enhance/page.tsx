@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { UploadZone } from "@/components/shared/UploadZone";
 import { BeforeAfterSlider } from "@/components/shared/BeforeAfterSlider";
 import { Button } from "@/components/ui/button";
@@ -9,18 +9,12 @@ import {
   Sparkles, 
   RefreshCw, 
   ShieldCheck,
-  Zap,
-  Layers,
-  Camera,
-  Cpu,
-  UserCheck,
-  Sun,
-  Wand2,
   Bot,
   Check
 } from "lucide-react";
 import { Spotlight } from "@/components/ui/spotlight";
 import { cn } from "@/lib/utils";
+import { useMounted } from "@/lib/use-mounted";
 import { processImageForClient } from "@/lib/image-client";
 import { useTheme } from "next-themes";
 import { useGeminiStore } from "@/lib/useGeminiStore";
@@ -40,9 +34,7 @@ export default function EnhancePage() {
 
   const { apiKey, selectedModel, setIsKeyModalOpen } = useGeminiStore();
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => { setMounted(true); }, []);
+  const mounted = useMounted();
 
   const handleUpload = async (file: File) => {
     setErrorText(null);

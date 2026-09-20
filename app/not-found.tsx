@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Home, Sparkles } from "lucide-react";
+import { Home, Sparkles } from "lucide-react";
 
 export default function NotFound() {
   return (
@@ -15,7 +15,7 @@ export default function NotFound() {
         404
       </h1>
       <p className="text-muted-foreground text-lg max-w-md mb-8">
-        The studio page or tool you are looking for doesn't exist or has been moved.
+        The studio page or tool you are looking for doesn&apos;t exist or has been moved.
       </p>
       <div className="flex items-center gap-4">
         <Button asChild size="lg" className="rounded-2xl font-bold shadow-xl">

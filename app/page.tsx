@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Spotlight } from "@/components/ui/spotlight";
@@ -10,21 +10,16 @@ import {
   Image as ImageIcon, 
   Wand2, 
   Crop, 
-  ArrowRight, 
-  SlidersHorizontal,
-  Layers,
-  Cpu,
-  ShieldCheck
+  ArrowRight
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useGeminiStore } from "@/lib/useGeminiStore";
+import { useMounted } from "@/lib/use-mounted";
 
 export default function Home() {
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const { apiKey, selectedModel, setIsKeyModalOpen } = useGeminiStore();
-
-  useEffect(() => { setMounted(true); }, []);
 
   return (
     <div className="flex flex-col items-center w-full overflow-hidden">

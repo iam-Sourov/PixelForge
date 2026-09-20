@@ -26,11 +26,12 @@ export async function POST(req: NextRequest) {
     console.log(`[API /api/remove-bg] Processing completed in ${duration.toFixed(2)}s`);
 
     return NextResponse.json({ resultImage });
-  } catch (err: any) {
-    console.warn("[API /api/remove-bg] Server background removal unavailable:", err?.message || err);
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.warn("[API /api/remove-bg] Server background removal unavailable:", errorMsg);
     return NextResponse.json({ 
       error: "Background removal engine unavailable on server", 
-      details: err?.message || String(err),
+      details: errorMsg,
       useClientMatting: true
     }, { status: 503 });
   }

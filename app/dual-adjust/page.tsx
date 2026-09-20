@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { UploadZone } from "@/components/shared/UploadZone";
 import { Button } from "@/components/ui/button";
 import { Spotlight } from "@/components/ui/spotlight";
@@ -12,19 +12,17 @@ import {
   RefreshCw, 
   Check, 
   Bot, 
-  ArrowRight,
-  ArrowLeftRight,
-  Sliders,
-  Layers,
-  FileImage,
-  Eye,
-  Maximize2,
+  ArrowRight, 
+  ArrowLeftRight, 
+  Layers, 
+  FileImage, 
+  Eye, 
   Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMounted } from "@/lib/use-mounted";
 import { processImageForClient } from "@/lib/image-client";
 import { removeBackgroundClient } from "@/lib/bg-client";
-import { motion } from "framer-motion";
 
 type BackdropType = "blue" | "white" | "gray" | "dark" | "gradient_purple" | "gradient_warm" | "transparent";
 type AspectRatio = "4:3" | "4:5" | "1:1";
@@ -64,9 +62,7 @@ export default function DualAdjustPage() {
 
   const { apiKey, selectedModel, setIsKeyModalOpen } = useGeminiStore();
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
 
   const handleUpload1 = async (file: File) => {
     setIsConverting1(true);
@@ -645,12 +641,31 @@ export default function DualAdjustPage() {
               {/* Right Column: Studio Controls Panel */}
               <div className="flex flex-col gap-6 p-6 rounded-3xl border border-border bg-card/60 backdrop-blur-2xl shadow-2xl">
                 
-                {/* 1. Backdrop Selector */}
+                {/* 1. Backdrop Selector & Aspect Ratio */}
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-foreground mb-3 flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-sky-400 to-blue-500 shadow-sm" />
-                    Studio Backdrop Color
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-sky-400 to-blue-500 shadow-sm" />
+                      Studio Backdrop Color
+                    </h3>
+                    <div className="flex items-center gap-1 bg-background/60 p-1 rounded-xl border border-border/70 text-[10px]">
+                      {(["4:3", "4:5", "1:1"] as AspectRatio[]).map((ratio) => (
+                        <button
+                          key={ratio}
+                          type="button"
+                          onClick={() => setAspectRatio(ratio)}
+                          className={cn(
+                            "px-2 py-0.5 rounded-lg font-medium transition-all",
+                            aspectRatio === ratio
+                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {ratio}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     {backdrops.map((b) => (
                       <button

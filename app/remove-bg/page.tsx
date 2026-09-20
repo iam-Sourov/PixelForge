@@ -1,32 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { UploadZone } from "@/components/shared/UploadZone";
 import { Button } from "@/components/ui/button";
 import { 
   Download, 
   Sparkles, 
   RefreshCw, 
-  Check, 
-  Palette, 
-  Layers,
-  FileImage,
-  SunMedium
+  Check
 } from "lucide-react";
 import { Spotlight } from "@/components/ui/spotlight";
 import { useTheme } from "next-themes";
-import { cn, fixExifOrientation } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { useMounted } from "@/lib/use-mounted";
 import { processImageForClient } from "@/lib/image-client";
 import { removeBackgroundClient } from "@/lib/bg-client";
-
-const blobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
 
 type BgOption = "transparent" | "white" | "blue" | "gray" | "dark" | "gradient_purple" | "gradient_warm";
 
@@ -37,12 +25,9 @@ export default function RemoveBgPage() {
   const [statusMessage, setStatusMessage] = useState<string>("Segmenting Subject & Matting Edges...");
   const [errorText, setErrorText] = useState<string | null>(null);
   const [selectedBg, setSelectedBg] = useState<BgOption>("transparent");
-  const [customColor, setCustomColor] = useState("#FFFFFF");
 
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
 
   const handleUpload = async (file: File) => {
     setErrorText(null);

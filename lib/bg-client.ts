@@ -1,4 +1,4 @@
-import { isHeicImage, convertHeicToJpeg, processImageForClient } from "./image-client";
+import { processImageForClient } from "./image-client";
 
 export type BgProgressCallback = (message: string, progress?: number) => void;
 

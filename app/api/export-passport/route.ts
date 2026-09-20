@@ -136,9 +136,8 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Row 2: 2 Stamp Size Photos (236 x 295) + 2 Passport photos or Stamp photos
+      // Row 2: 4 Stamp Size Photos (236 x 295)
       const stampW = 236;
-      const stampH = 295;
       const stampSpacingX = 40;
       const stampStartX = Math.round((sheetW - (4 * stampW + 3 * stampSpacingX)) / 2);
       const stampTopY = topY + targetH + 80;
