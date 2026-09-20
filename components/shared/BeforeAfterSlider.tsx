@@ -60,9 +60,10 @@ export function BeforeAfterSlider({
     <div
       ref={containerRef}
       className={cn(
-        "relative mx-auto h-[400px] w-full max-w-4xl cursor-ew-resize overflow-hidden rounded-2xl bg-muted/20 select-none glass-card",
+        "relative mx-auto h-[300px] sm:h-[380px] md:h-[460px] w-full max-w-4xl cursor-ew-resize overflow-hidden rounded-2xl bg-muted/20 select-none glass-card touch-none",
         className
       )}
+      onClick={(e) => handleMove(e.clientX)}
       onMouseMove={handleMouseMove}
       onMouseUp={() => setIsDragging(false)}
       onMouseLeave={() => setIsDragging(false)}
@@ -97,16 +98,16 @@ export function BeforeAfterSlider({
 
       {/* Slider Line & Handle */}
       <div
-        className="absolute bottom-0 top-0 flex w-[2px] cursor-ew-resize items-center justify-center bg-white shadow-[0_0_10px_rgba(0,0,0,0.5)]"
+        className="absolute bottom-0 top-0 flex w-[2px] cursor-ew-resize items-center justify-center bg-white shadow-[0_0_12px_rgba(0,0,0,0.6)]"
         style={{ left: `${sliderPosition}%`, pointerEvents: "none" }}
       >
         <div 
-          className="flex h-10 w-10 origin-center translate-x-[-1px] items-center justify-center rounded-full border border-white/20 bg-background/80 shadow-2xl backdrop-blur-md"
+          className="flex h-11 w-11 sm:h-10 sm:w-10 origin-center translate-x-[-1px] items-center justify-center rounded-full border-2 border-white/40 bg-background/90 shadow-2xl backdrop-blur-md touch-manipulation active:scale-110 transition-transform"
           onMouseDown={(e) => { e.stopPropagation(); setIsDragging(true); }}
           onTouchStart={(e) => { e.stopPropagation(); setIsDragging(true); }}
           style={{ pointerEvents: "auto" }}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-foreground stroke-current opacity-80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-foreground stroke-current opacity-90" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M11 9L8 12L11 15" />
             <path d="M13 9L16 12L13 15" />
           </svg>
@@ -114,10 +115,10 @@ export function BeforeAfterSlider({
       </div>
 
       {/* Labels */}
-      <span className="absolute bottom-4 left-4 rounded-full bg-background/60 px-3 py-1 font-mono text-xs font-semibold tracking-wide text-foreground backdrop-blur-md">
+      <span className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 rounded-full bg-background/80 px-2.5 py-0.5 sm:px-3 sm:py-1 font-mono text-[10px] sm:text-xs font-semibold tracking-wide text-foreground backdrop-blur-md border border-border/40 shadow-sm pointer-events-none">
         {beforeLabel}
       </span>
-      <span className="absolute bottom-4 right-4 rounded-full bg-primary/80 px-3 py-1 font-mono text-xs font-semibold tracking-wide text-primary-foreground backdrop-blur-md">
+      <span className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 rounded-full bg-primary/90 px-2.5 py-0.5 sm:px-3 sm:py-1 font-mono text-[10px] sm:text-xs font-semibold tracking-wide text-primary-foreground backdrop-blur-md border border-white/20 shadow-sm pointer-events-none">
         {afterLabel}
       </span>
     </div>

@@ -228,10 +228,10 @@ export default function PassportPage() {
 
         {/* Workspace */}
         {transparentUrl && (
-          <div className="space-y-8 animate-in zoom-in-95 duration-500 w-full">
+          <div className="space-y-6 sm:space-y-8 animate-in zoom-in-95 duration-500 w-full">
               
               {/* Preset Format Selector Tabs */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 max-w-3xl mx-auto">
                 {presets.map((p) => {
                   const isSelected = preset === p.id;
                   return (
@@ -239,7 +239,7 @@ export default function PassportPage() {
                       key={p.id}
                       onClick={() => setPreset(p.id)}
                       className={cn(
-                        "p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between gap-1.5",
+                        "p-3 sm:p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between gap-1 touch-manipulation",
                         isSelected
                           ? "border-primary bg-primary/10 shadow-md ring-1 ring-primary"
                           : "border-border/60 bg-card/30 hover:bg-muted/40 hover:border-border"
@@ -250,7 +250,7 @@ export default function PassportPage() {
                           <span className={cn("w-3 h-3 rounded-full bg-gradient-to-tr shadow-sm ring-1 ring-white/20 shrink-0", p.gradient)} />
                           <span className="font-bold text-xs text-foreground">{p.name}</span>
                         </div>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
+                        {isSelected && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
                       </div>
                       <span className="font-mono text-xs font-semibold text-primary">{p.size}</span>
                       <span className="text-[10px] text-muted-foreground">{p.sub}</span>
@@ -260,15 +260,15 @@ export default function PassportPage() {
               </div>
 
               {/* Cropper & Controls Grid */}
-              <div className="grid md:grid-cols-[auto_1fr] gap-8 items-start justify-center max-w-4xl mx-auto border border-border/80 bg-card/40 p-6 md:p-8 rounded-3xl backdrop-blur-2xl shadow-2xl">
+              <div className="grid md:grid-cols-[auto_1fr] gap-6 md:gap-8 items-start justify-center max-w-4xl mx-auto border border-border/80 bg-card/40 p-4 sm:p-6 md:p-8 rounded-3xl backdrop-blur-2xl shadow-2xl">
                 
                 {/* Result Image cropping container */}
-                <div className="flex flex-col items-center gap-4">
+                <div className="flex flex-col items-center gap-4 w-full">
                   <div 
-                    className="relative shrink-0 transition-transform duration-300 rounded-2xl overflow-hidden border-2 border-border shadow-2xl"
+                    className="relative shrink-0 transition-transform duration-300 rounded-2xl overflow-hidden border-2 border-border shadow-2xl max-w-[calc(100vw-64px)] mx-auto"
                     style={{
-                      width: preset === "bd_epassport" ? "300px" : preset === "bd_stamp" ? "240px" : "280px",
-                      height: preset === "bd_epassport" ? "300px" : preset === "bd_stamp" ? "300px" : "360px",
+                      width: preset === "bd_epassport" ? "min(280px, 80vw)" : preset === "bd_stamp" ? "min(240px, 75vw)" : "min(280px, 80vw)",
+                      height: preset === "bd_epassport" ? "min(280px, 80vw)" : preset === "bd_stamp" ? "min(300px, 90vw)" : "min(350px, 95vw)",
                     }}
                   >
                     <Cropper
@@ -290,13 +290,13 @@ export default function PassportPage() {
 
                     {/* Official BD Passport ICAO Framing Guidelines Overlay */}
                     {showGuidelines && (
-                      <div className="absolute inset-0 pointer-events-none z-20 flex flex-col justify-between p-3 border-2 border-dashed border-emerald-500/50">
-                        <div className="flex justify-between items-center text-[9px] font-mono text-emerald-400 bg-black/60 px-2 py-0.5 rounded backdrop-blur-sm self-center">
+                      <div className="absolute inset-0 pointer-events-none z-20 flex flex-col justify-between p-2.5 sm:p-3 border-2 border-dashed border-emerald-500/50">
+                        <div className="flex justify-between items-center text-[8px] sm:text-[9px] font-mono text-emerald-400 bg-black/70 px-2 py-0.5 rounded backdrop-blur-sm self-center">
                           Crown / Hair Top (70-80% Face)
                         </div>
                         <div className="w-full border-t border-dashed border-emerald-400/40" />
                         <div className="w-full border-t border-dashed border-emerald-400/40" />
-                        <div className="flex justify-between items-center text-[9px] font-mono text-emerald-400 bg-black/60 px-2 py-0.5 rounded backdrop-blur-sm self-center">
+                        <div className="flex justify-between items-center text-[8px] sm:text-[9px] font-mono text-emerald-400 bg-black/70 px-2 py-0.5 rounded backdrop-blur-sm self-center">
                           Chin Line Guide
                         </div>
                       </div>
@@ -313,14 +313,14 @@ export default function PassportPage() {
                       step={0.05}
                       value={zoom}
                       onChange={(e) => setZoom(Number(e.target.value))}
-                      className="w-full accent-primary"
+                      className="w-full accent-primary touch-manipulation"
                     />
                     <span className="shrink-0 text-[11px] font-mono">{zoom.toFixed(1)}x</span>
                   </div>
                 </div>
 
                 {/* Right Side Studio Controls */}
-                <div className="flex flex-col gap-6 text-left w-full h-full justify-between">
+                <div className="flex flex-col gap-5 sm:gap-6 text-left w-full h-full justify-between">
                   
                   {/* Background Color Preset */}
                   <div>
@@ -328,13 +328,13 @@ export default function PassportPage() {
                       <span>Studio Background</span>
                       <button
                         onClick={() => setShowGuidelines(!showGuidelines)}
-                        className="text-[11px] text-primary hover:underline flex items-center gap-1 font-normal lowercase tracking-normal"
+                        className="text-[11px] text-primary hover:underline flex items-center gap-1 font-normal lowercase tracking-normal touch-manipulation"
                       >
-                        <Eye className="w-3 h-3" /> {showGuidelines ? "Hide Guidelines" : "Show Guidelines"}
+                        <Eye className="w-3 h-3" /> {showGuidelines ? "Hide Guides" : "Show Guides"}
                       </button>
                     </h3>
 
-                    <div className="grid grid-cols-3 gap-2.5">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
                       {[
                         { id: "white", label: "Pure White", gradient: "from-slate-100 via-white to-slate-200 border-slate-300/60" },
                         { id: "blue", label: "Sky Blue", gradient: "from-sky-300 via-blue-300 to-cyan-200 border-sky-300/60 shadow-sky-400/25" },
@@ -344,16 +344,16 @@ export default function PassportPage() {
                           key={c.id}
                           onClick={() => setBgColor(c.id as "white" | "blue" | "gray")}
                           className={cn(
-                            "relative h-14 rounded-xl flex flex-col items-center justify-center p-1 transition-all border",
+                            "relative h-13 sm:h-14 rounded-xl flex flex-col items-center justify-center p-1 transition-all border touch-manipulation",
                             bgColor === c.id
                               ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105 border-primary shadow-md"
                               : "hover:scale-102 border-border/70 bg-card/60"
                           )}
                         >
                           <span
-                            className={cn("w-5 h-5 rounded-full border mb-1 bg-gradient-to-br shadow-sm ring-1 ring-white/20", c.gradient)}
+                            className={cn("w-4 h-4 sm:w-5 sm:h-5 rounded-full border mb-1 bg-gradient-to-br shadow-sm ring-1 ring-white/20 shrink-0", c.gradient)}
                           />
-                          <span className="text-[11px] font-bold text-foreground">{c.label}</span>
+                          <span className="text-[10px] sm:text-[11px] font-bold text-foreground truncate max-w-full px-1">{c.label}</span>
                           {bgColor === c.id && <Check className="absolute top-1.5 right-1.5 w-3 h-3 text-primary" />}
                         </button>
                       ))}
@@ -372,18 +372,20 @@ export default function PassportPage() {
                         size="lg"
                         onClick={() => handleExport("jpg")}
                         disabled={isExporting}
-                        className="rounded-xl h-12 text-xs font-bold shadow-md"
+                        className="rounded-xl h-11 sm:h-12 text-xs font-bold shadow-md touch-manipulation px-2"
                       >
-                        <Download className="mr-2 h-4 w-4" /> Single JPG (300 DPI)
+                        <Download className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <span className="truncate">JPG (300 DPI)</span>
                       </Button>
                       <Button
                         size="lg"
                         variant="secondary"
                         onClick={() => handleExport("png")}
                         disabled={isExporting}
-                        className="rounded-xl h-12 text-xs font-bold border border-border"
+                        className="rounded-xl h-11 sm:h-12 text-xs font-bold border border-border touch-manipulation px-2"
                       >
-                        <FileImage className="mr-2 h-4 w-4" /> Single PNG
+                        <FileImage className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        <span className="truncate">PNG Format</span>
                       </Button>
                     </div>
 
@@ -391,7 +393,7 @@ export default function PassportPage() {
                     <div className="pt-2 border-t border-border/50 space-y-2">
                       <div className="text-[11px] font-semibold text-muted-foreground flex items-center justify-between">
                         <span>4×6&quot; Print Layouts:</span>
-                        <span className="font-mono text-[10px] text-emerald-400">Ready for Lab & Studio</span>
+                        <span className="font-mono text-[10px] text-emerald-400">Lab & Studio Ready</span>
                       </div>
 
                       {/* Studio Combo Sheet (4 Passport + 4 Stamp) */}
@@ -399,9 +401,10 @@ export default function PassportPage() {
                         size="lg"
                         onClick={() => handleExport("sheet_jpg", "combo")}
                         disabled={isExporting}
-                        className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold h-12 text-xs shadow-lg transition-transform hover:scale-[1.01]"
+                        className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold h-12 sm:h-13 text-xs shadow-lg transition-transform hover:scale-[1.01] touch-manipulation px-2 text-center"
                       >
-                        <Grid3X3 className="mr-2 h-4 w-4" /> 🇧🇩 BD Studio Combo (4 Passport + 4 Stamp Sheet)
+                        <Grid3X3 className="mr-2 h-4 w-4 shrink-0" />
+                        <span className="truncate">🇧🇩 BD Combo (4 Passport + 4 Stamp Sheet)</span>
                       </Button>
 
                       <div className="grid grid-cols-2 gap-2">
@@ -410,18 +413,20 @@ export default function PassportPage() {
                           variant="outline"
                           onClick={() => handleExport("psd", "4x1")}
                           disabled={isExporting}
-                          className="rounded-xl border-border bg-card/60 h-10 text-xs font-medium"
+                          className="rounded-xl border-border bg-card/60 h-10 text-xs font-medium touch-manipulation px-2"
                         >
-                          <Layers className="mr-1.5 h-3.5 w-3.5 text-blue-400" /> PSD (4×1 Row)
+                          <Layers className="mr-1.5 h-3.5 w-3.5 text-blue-400 shrink-0" />
+                          <span className="truncate">PSD (4×1 Row)</span>
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleExport("psd", "4x2")}
                           disabled={isExporting}
-                          className="rounded-xl border-border bg-card/60 h-10 text-xs font-medium"
+                          className="rounded-xl border-border bg-card/60 h-10 text-xs font-medium touch-manipulation px-2"
                         >
-                          <Layers className="mr-1.5 h-3.5 w-3.5 text-indigo-400" /> PSD (8 Photos 4×2)
+                          <Layers className="mr-1.5 h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                          <span className="truncate">PSD (8 Photos 4×2)</span>
                         </Button>
                       </div>
                     </div>
@@ -432,7 +437,7 @@ export default function PassportPage() {
                       size="sm"
                       onClick={reset}
                       disabled={isExporting}
-                      className="w-full rounded-xl text-muted-foreground hover:text-foreground mt-1 text-xs"
+                      className="w-full rounded-xl text-muted-foreground hover:text-foreground mt-1 text-xs touch-manipulation h-9"
                     >
                       <RefreshCw className="mr-2 h-3.5 w-3.5" /> Process New Photo
                     </Button>

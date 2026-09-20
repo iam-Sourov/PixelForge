@@ -94,9 +94,9 @@ export function GeminiKeyModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xl animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-background/80 backdrop-blur-xl animate-in fade-in duration-300">
       <div 
-        className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-border bg-card/95 shadow-2xl p-6 md:p-8 backdrop-blur-2xl"
+        className="relative w-full max-w-2xl max-h-[90dvh] overflow-y-auto rounded-2xl sm:rounded-3xl border border-border bg-card/95 shadow-2xl p-4 sm:p-6 md:p-8 backdrop-blur-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Glow decoration */}
@@ -106,34 +106,35 @@ export function GeminiKeyModal() {
         {/* Close Button */}
         <button
           onClick={() => setIsKeyModalOpen(false)}
-          className="absolute top-6 right-6 p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors touch-manipulation"
           title="Close dialog"
+          aria-label="Close dialog"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header */}
-        <div className="flex items-start gap-4 mb-6">
-          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 via-indigo-600 to-fuchsia-600 shadow-lg shadow-purple-500/25 ring-1 ring-white/20 flex items-center justify-center text-white shrink-0">
-            <Sparkles className="w-6 h-6 animate-pulse" />
+        <div className="flex items-start gap-3 sm:gap-4 mb-4 sm:mb-6 pr-8 sm:pr-0">
+          <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-500 via-indigo-600 to-fuchsia-600 shadow-lg shadow-purple-500/25 ring-1 ring-white/20 flex items-center justify-center text-white shrink-0">
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <h2 className="text-lg sm:text-2xl font-bold tracking-tight text-foreground flex items-center flex-wrap gap-2">
               Gemini Cloud AI Setup
-              <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500/10 to-indigo-500/10 text-primary border border-primary/20">
+              <span className="text-[9px] sm:text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500/10 to-indigo-500/10 text-primary border border-primary/20">
                 Pro & Flash
               </span>
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               Connect your Google AI Studio API key to unlock cloud AI enhancement, 2-picture adjustments, and high-fidelity vision intelligence.
             </p>
           </div>
         </div>
 
         {/* Form Controls */}
-        <div className="space-y-5">
+        <div className="space-y-4 sm:space-y-5">
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground flex-wrap gap-1">
               <label htmlFor="gemini-key">Gemini API Key</label>
               <a
                 href="https://aistudio.google.com/app/apikey"
@@ -261,7 +262,7 @@ export function GeminiKeyModal() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between gap-3 pt-2">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 pt-2">
             {apiKey ? (
               <Button
                 variant="ghost"
@@ -273,7 +274,7 @@ export function GeminiKeyModal() {
                   setSuccessMessage(null);
                   setErrorMessage(null);
                 }}
-                className="text-xs text-muted-foreground hover:text-destructive"
+                className="text-xs text-muted-foreground hover:text-destructive touch-manipulation h-10 sm:h-9"
               >
                 Disconnect Key
               </Button>
@@ -282,7 +283,7 @@ export function GeminiKeyModal() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsKeyModalOpen(false)}
-                className="text-xs text-muted-foreground"
+                className="text-xs text-muted-foreground touch-manipulation h-10 sm:h-9"
               >
                 Skip / Continue Offline
               </Button>
@@ -290,7 +291,7 @@ export function GeminiKeyModal() {
 
             <Button
               onClick={handleSaveAndClose}
-              className="rounded-xl px-6 h-11 font-semibold text-sm shadow-lg hover:shadow-primary/20"
+              className="rounded-xl px-6 h-11 font-semibold text-sm shadow-lg hover:shadow-primary/20 touch-manipulation"
             >
               Save & Launch Studio <ArrowRight className="w-4 h-4 ml-1" />
             </Button>

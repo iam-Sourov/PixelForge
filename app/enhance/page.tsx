@@ -148,7 +148,7 @@ export default function EnhancePage() {
     <div className="relative min-h-[calc(100vh-80px)] w-full overflow-hidden flex flex-col items-center justify-start p-4 md:p-8">
       {mounted && <Spotlight className="-top-40 left-0 md:left-20 md:-top-20" fill={resolvedTheme === "dark" ? "white" : "black"} />}
       
-      <div className="z-10 w-full max-w-6xl flex flex-col items-center gap-8">
+      <div className="z-10 w-full max-w-6xl flex flex-col items-center gap-6 sm:gap-8">
         
         {/* Header Section */}
         <AnimatePresence mode="wait">
@@ -157,19 +157,19 @@ export default function EnhancePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="text-center space-y-4"
+              className="text-center space-y-3 sm:space-y-4 px-2"
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-mono text-primary">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[11px] sm:text-xs font-mono text-primary">
                 <Sparkles className="w-3.5 h-3.5 animate-pulse" />
                 Cloud AI & Neural Super-Resolution
               </div>
-              <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-none">
+              <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-none break-words">
                 AI PHOTO.<br/>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-foreground to-primary/60">
                   REMASTERED HD.
                 </span>
               </h1>
-              <p className="text-muted-foreground md:text-xl max-w-2xl mx-auto font-light leading-relaxed">
+              <p className="text-sm sm:text-base md:text-xl text-muted-foreground max-w-2xl mx-auto font-light leading-relaxed">
                 Restore details, eliminate noise, and enhance portrait fidelity with Gemini Cloud AI and sub-pixel texture reconstruction.
               </p>
 
@@ -177,11 +177,11 @@ export default function EnhancePage() {
               <div className="flex items-center justify-center gap-3 pt-2">
                 <button
                   onClick={() => setIsKeyModalOpen(true)}
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-border/60 bg-card/60 backdrop-blur-md text-xs hover:border-primary/40 transition-colors"
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-border/60 bg-card/60 backdrop-blur-md text-xs hover:border-primary/40 transition-colors touch-manipulation max-w-[90vw] truncate"
                 >
-                  <span className="w-2 h-2 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 shadow-sm" />
-                  <span>Model: <strong className="text-foreground font-mono">{selectedModel}</strong></span>
-                  {!apiKey && <span className="text-[10px] text-amber-500 font-bold ml-1">(Click to configure)</span>}
+                  <span className="w-2 h-2 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 shadow-sm shrink-0" />
+                  <span className="truncate">Model: <strong className="text-foreground font-mono">{selectedModel}</strong></span>
+                  {!apiKey && <span className="text-[10px] text-amber-500 font-bold ml-1 shrink-0">(Click to configure)</span>}
                 </button>
               </div>
             </motion.div>
@@ -200,28 +200,28 @@ export default function EnhancePage() {
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="rounded-3xl border border-border/60 bg-card/40 p-3 backdrop-blur-3xl shadow-2xl mx-auto max-w-3xl"
+              className="rounded-3xl border border-border/60 bg-card/40 p-2.5 sm:p-3 backdrop-blur-3xl shadow-2xl mx-auto max-w-3xl"
             >
               <UploadZone
                 onFileSelect={handleUpload}
-                className="min-h-[420px] border-dashed border-primary/20 bg-transparent hover:bg-primary/5 transition-all rounded-2xl group"
+                className="min-h-[300px] sm:min-h-[420px] border-dashed border-primary/20 bg-transparent hover:bg-primary/5 transition-all rounded-2xl group"
               />
             </motion.div>
           ) : (
-            <div className="grid gap-8 lg:grid-cols-[1fr_380px] w-full items-start">
+            <div className="grid gap-6 lg:gap-8 lg:grid-cols-[1fr_380px] w-full items-start">
               
               {/* Massive Comparison & Preview Box */}
-              <div className="space-y-6">
-                <div className="relative w-full rounded-3xl border border-border bg-card/40 backdrop-blur-2xl p-4 shadow-2xl overflow-hidden min-h-[460px] flex items-center justify-center">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="relative w-full rounded-3xl border border-border bg-card/40 backdrop-blur-2xl p-3 sm:p-4 shadow-2xl overflow-hidden min-h-[340px] sm:min-h-[460px] flex items-center justify-center">
                   
                   {enhancedUrl ? (
                     <div className="w-full">
-                      <div className="flex items-center justify-between mb-3 px-2">
+                      <div className="flex items-center justify-between mb-2.5 sm:mb-3 px-1 sm:px-2 flex-wrap gap-1">
                         <span className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
                           <Sparkles className="w-3.5 h-3.5 text-primary" />
                           Interactive Before / After
                         </span>
-                        <span className="text-[11px] font-mono text-muted-foreground">
+                        <span className="text-[10px] sm:text-[11px] font-mono text-muted-foreground">
                           Swipe slider to inspect
                         </span>
                       </div>
@@ -230,11 +230,11 @@ export default function EnhancePage() {
                         afterImage={enhancedUrl}
                         beforeLabel="Original RAW"
                         afterLabel="Remastered HD"
-                        className="h-[420px] md:h-[480px] rounded-2xl shadow-inner"
+                        className="h-[300px] sm:h-[400px] md:h-[480px] rounded-2xl shadow-inner"
                       />
                     </div>
                   ) : (
-                    <div className="relative h-[420px] md:h-[480px] w-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/20">
+                    <div className="relative h-[300px] sm:h-[400px] md:h-[480px] w-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/20">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={originalUrl}
@@ -248,14 +248,14 @@ export default function EnhancePage() {
                       {/* Progress Overlay */}
                       {isProcessing && (
                         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-background/60 backdrop-blur-md p-6">
-                          <div className="w-2/3 h-1.5 bg-muted rounded-full overflow-hidden shadow-inner">
+                          <div className="w-2/3 max-w-xs h-1.5 bg-muted rounded-full overflow-hidden shadow-inner">
                             <motion.div 
                               className="h-full bg-primary"
                               initial={{ width: "0%" }}
                               animate={{ width: `${progress}%` }}
                             />
                           </div>
-                          <p className="mt-4 font-mono text-xs tracking-[0.3em] text-primary uppercase animate-pulse">
+                          <p className="mt-4 font-mono text-[10px] sm:text-xs tracking-[0.2em] sm:tracking-[0.3em] text-primary uppercase animate-pulse text-center">
                             Gemini AI Neural Pass in Progress...
                           </p>
                         </div>
@@ -266,9 +266,9 @@ export default function EnhancePage() {
 
                 {/* AI Insights Card */}
                 {aiInsights && (
-                  <div className="p-5 rounded-3xl border border-primary/20 bg-primary/5 backdrop-blur-xl space-y-2">
+                  <div className="p-4 sm:p-5 rounded-3xl border border-primary/20 bg-primary/5 backdrop-blur-xl space-y-2">
                     <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
-                      <Bot className="w-4 h-4" />
+                      <Bot className="w-4 h-4 shrink-0" />
                       Gemini Vision Retoucher Notes ({selectedModel})
                     </div>
                     <p className="text-xs text-foreground/90 whitespace-pre-line leading-relaxed font-light">
@@ -282,10 +282,10 @@ export default function EnhancePage() {
               <motion.div 
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="flex flex-col gap-6 p-6 md:p-8 rounded-3xl border border-border bg-card/50 backdrop-blur-3xl shadow-2xl h-fit"
+                className="flex flex-col gap-5 sm:gap-6 p-4 sm:p-6 md:p-8 rounded-3xl border border-border bg-card/50 backdrop-blur-3xl shadow-2xl h-fit"
               >
                 <div>
-                  <h3 className="text-xl font-black tracking-tight">AI Enhancement Mode</h3>
+                  <h3 className="text-lg sm:text-xl font-black tracking-tight">AI Enhancement Mode</h3>
                   <p className="text-xs text-muted-foreground mt-1">
                     Select target optimization profile:
                   </p>
@@ -301,7 +301,7 @@ export default function EnhancePage() {
                         type="button"
                         onClick={() => setMode(m.id)}
                         className={cn(
-                          "w-full p-3 rounded-xl border text-left transition-all flex flex-col gap-0.5",
+                          "w-full p-2.5 sm:p-3 rounded-xl border text-left transition-all flex flex-col gap-0.5 touch-manipulation",
                           isSelected
                             ? "border-primary bg-primary/10 shadow-sm ring-1 ring-primary"
                             : "border-border/60 bg-background/40 hover:bg-muted/40 hover:border-border"
@@ -312,7 +312,7 @@ export default function EnhancePage() {
                             <span className={cn("w-4 h-4 rounded-md bg-gradient-to-br shadow-sm shrink-0 ring-1 ring-white/20", m.gradient)} />
                             {m.title}
                           </span>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
+                          {isSelected && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
                         </div>
                         <span className="text-[10px] text-muted-foreground leading-relaxed pl-6">
                           {m.desc}
@@ -337,14 +337,14 @@ export default function EnhancePage() {
                 )}
 
                 {/* Action Buttons */}
-                <div className="space-y-3 pt-2">
+                <div className="space-y-2.5 sm:space-y-3 pt-2">
                   {!enhancedUrl && !isProcessing ? (
                     <Button 
                       size="lg" 
                       onClick={startEnhancement}
-                      className="w-full h-14 rounded-2xl bg-foreground text-background hover:bg-foreground/90 font-bold text-sm shadow-xl transition-transform hover:scale-[1.02]"
+                      className="w-full h-12 sm:h-14 rounded-2xl bg-foreground text-background hover:bg-foreground/90 font-bold text-sm shadow-xl transition-transform hover:scale-[1.02] touch-manipulation"
                     >
-                      <Sparkles className="mr-2 h-5 w-5" />
+                      <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                       Remaster with Cloud AI
                     </Button>
                   ) : (
@@ -352,9 +352,9 @@ export default function EnhancePage() {
                       size="lg" 
                       onClick={handleDownload}
                       disabled={isProcessing}
-                      className="w-full h-14 rounded-2xl font-bold text-sm shadow-xl hover:shadow-primary/20 transition-transform hover:scale-[1.02]"
+                      className="w-full h-12 sm:h-14 rounded-2xl font-bold text-sm shadow-xl hover:shadow-primary/20 transition-transform hover:scale-[1.02] touch-manipulation"
                     >
-                      <Download className="mr-2 h-5 w-5" />
+                      <Download className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                       Download Master PNG
                     </Button>
                   )}
@@ -362,14 +362,14 @@ export default function EnhancePage() {
                   <Button 
                     variant="ghost" 
                     onClick={clear} 
-                    className="w-full h-10 rounded-xl text-muted-foreground hover:text-foreground text-xs font-semibold"
+                    className="w-full h-9 sm:h-10 rounded-xl text-muted-foreground hover:text-foreground text-xs font-semibold touch-manipulation"
                   >
                     <RefreshCw className="mr-2 h-3.5 w-3.5" /> Start Over
                   </Button>
                 </div>
 
                 {/* Specs Info */}
-                <div className="p-4 rounded-2xl bg-muted/20 border border-border/40 text-[11px] space-y-1.5 text-muted-foreground">
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-muted/20 border border-border/40 text-[11px] space-y-1.5 text-muted-foreground">
                   <div className="flex justify-between">
                     <span>Engine:</span>
                     <span className="font-mono text-foreground">{apiKey ? "Gemini Cloud Vision" : "Local Python/Sharp"}</span>

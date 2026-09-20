@@ -16,8 +16,7 @@ import {
   ArrowLeftRight, 
   Layers, 
   FileImage, 
-  Eye, 
-  Users
+  Eye
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMounted } from "@/lib/use-mounted";
@@ -445,19 +444,21 @@ export default function DualAdjustPage() {
     <div className="relative min-h-[calc(100vh-80px)] w-full overflow-hidden flex flex-col items-center justify-start p-4 md:p-8">
       {mounted && <Spotlight className="-top-40 left-0 md:left-40 md:-top-20" fill={resolvedTheme === "dark" ? "white" : "black"} />}
 
-      <div className="z-10 w-full max-w-6xl flex flex-col items-center gap-8">
+      <div className="z-10 w-full max-w-5xl flex flex-col items-center gap-6 sm:gap-8">
         
-        {/* Header */}
+        {/* Header Section */}
         {!person1Transparent && (
-          <div className="text-center space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-mono text-primary mb-2">
-              <Users className="w-3.5 h-3.5" />
-              2-Picture Joint Studio Photo (যৌথ ছবি)
+          <div className="text-center space-y-3 sm:space-y-4 mb-2 sm:mb-4 px-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[11px] sm:text-xs font-mono text-primary">
+              <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+              Duo Portrait Studio Fusion
             </div>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground">
+            
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground break-words">
               2-Picture Joint Studio
             </h1>
-            <p className="text-muted-foreground md:text-lg max-w-2xl mx-auto font-light">
+            
+            <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto font-light leading-relaxed">
               Upload two individual photos. AI automatically isolates both people, levels eye lines, matches lighting, and attaches them into a unified studio joint photo.
             </p>
 
@@ -465,11 +466,11 @@ export default function DualAdjustPage() {
             <div className="flex items-center justify-center gap-3 pt-2">
               <button
                 onClick={() => setIsKeyModalOpen(true)}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-border/60 bg-card/60 backdrop-blur-md text-xs hover:border-primary/40 transition-colors"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-border/60 bg-card/60 backdrop-blur-md text-xs hover:border-primary/40 transition-colors touch-manipulation max-w-[90vw] truncate"
               >
-                <span className="w-2 h-2 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 shadow-sm" />
-                <span>Active Model: <strong className="text-foreground font-mono">{selectedModel}</strong></span>
-                {!apiKey && <span className="text-[10px] text-amber-500 font-bold ml-1">(Click to add API Key)</span>}
+                <span className="w-2 h-2 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 shadow-sm shrink-0" />
+                <span className="truncate">Active Model: <strong className="text-foreground font-mono">{selectedModel}</strong></span>
+                {!apiKey && <span className="text-[10px] text-amber-500 font-bold ml-1 shrink-0">(Click to add key)</span>}
               </button>
             </div>
           </div>
@@ -484,27 +485,27 @@ export default function DualAdjustPage() {
 
         {/* Stage 1: Upload 2 Individual Photos */}
         {!person1Transparent ? (
-          <div className="w-full space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto">
+          <div className="w-full space-y-6 sm:space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-4xl mx-auto">
               
               {/* Box 1: Person 1 */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2.5 sm:gap-3">
+                <div className="flex items-center justify-between px-1">
                   <span className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 shadow-[0_0_8px_rgba(168,85,247,0.6)] ring-1 ring-white/20 shrink-0" />
-                    Person 1 (Left / e.g. Groom / Husband)
+                    Person 1 (Left / e.g. Groom)
                   </span>
                   {image1Url && (
                     <button
                       onClick={() => setImage1Url(null)}
-                      className="text-xs text-muted-foreground hover:text-foreground"
+                      className="text-xs text-muted-foreground hover:text-foreground touch-manipulation font-semibold"
                     >
                       Change
                     </button>
                   )}
                 </div>
 
-                <div className="relative rounded-3xl border border-border bg-card/40 backdrop-blur-xl p-3 shadow-xl min-h-[320px] flex items-center justify-center overflow-hidden">
+                <div className="relative rounded-3xl border border-border bg-card/40 backdrop-blur-xl p-2.5 sm:p-3 shadow-xl min-h-[280px] sm:min-h-[320px] flex items-center justify-center overflow-hidden">
                   {isConverting1 ? (
                     <div className="flex flex-col items-center justify-center gap-2 text-primary animate-pulse">
                       <Sparkles className="w-8 h-8 animate-spin" />
@@ -515,37 +516,37 @@ export default function DualAdjustPage() {
                     <img
                       src={image1Url}
                       alt="Person 1"
-                      className="max-h-[300px] w-full object-contain rounded-2xl animate-in fade-in"
+                      className="max-h-[260px] sm:max-h-[300px] w-full object-contain rounded-2xl animate-in fade-in"
                     />
                   ) : (
                     <UploadZone
                       onFileSelect={handleUpload1}
                       title="Drop Person 1 Photo"
-                      description="Upload left person portrait (JPG, PNG, HEIC)"
-                      className="w-full h-full min-h-[280px] border-dashed border-border/60 rounded-2xl bg-transparent"
+                      description="Upload left portrait (JPG, PNG, HEIC)"
+                      className="w-full h-full min-h-[260px] sm:min-h-[280px] border-dashed border-border/60 rounded-2xl bg-transparent"
                     />
                   )}
                 </div>
               </div>
 
               {/* Box 2: Person 2 */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2.5 sm:gap-3">
+                <div className="flex items-center justify-between px-1">
                   <span className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-400 shadow-[0_0_8px_rgba(59,130,246,0.6)] ring-1 ring-white/20 shrink-0" />
-                    Person 2 (Right / e.g. Bride / Wife)
+                    Person 2 (Right / e.g. Bride)
                   </span>
                   {image2Url && (
                     <button
                       onClick={() => setImage2Url(null)}
-                      className="text-xs text-muted-foreground hover:text-foreground"
+                      className="text-xs text-muted-foreground hover:text-foreground touch-manipulation font-semibold"
                     >
                       Change
                     </button>
                   )}
                 </div>
 
-                <div className="relative rounded-3xl border border-border bg-card/40 backdrop-blur-xl p-3 shadow-xl min-h-[320px] flex items-center justify-center overflow-hidden">
+                <div className="relative rounded-3xl border border-border bg-card/40 backdrop-blur-xl p-2.5 sm:p-3 shadow-xl min-h-[280px] sm:min-h-[320px] flex items-center justify-center overflow-hidden">
                   {isConverting2 ? (
                     <div className="flex flex-col items-center justify-center gap-2 text-indigo-400 animate-pulse">
                       <Sparkles className="w-8 h-8 animate-spin" />
@@ -556,14 +557,14 @@ export default function DualAdjustPage() {
                     <img
                       src={image2Url}
                       alt="Person 2"
-                      className="max-h-[300px] w-full object-contain rounded-2xl animate-in fade-in"
+                      className="max-h-[260px] sm:max-h-[300px] w-full object-contain rounded-2xl animate-in fade-in"
                     />
                   ) : (
                     <UploadZone
                       onFileSelect={handleUpload2}
                       title="Drop Person 2 Photo"
-                      description="Upload right person portrait (JPG, PNG, HEIC)"
-                      className="w-full h-full min-h-[280px] border-dashed border-border/60 rounded-2xl bg-transparent"
+                      description="Upload right portrait (JPG, PNG, HEIC)"
+                      className="w-full h-full min-h-[260px] sm:min-h-[280px] border-dashed border-border/60 rounded-2xl bg-transparent"
                     />
                   )}
                 </div>
@@ -571,23 +572,23 @@ export default function DualAdjustPage() {
             </div>
 
             {/* Launch Action */}
-            <div className="flex justify-center pt-2">
+            <div className="flex justify-center pt-2 px-4 sm:px-0">
               <Button
                 size="lg"
                 onClick={startJointGeneration}
                 disabled={isProcessing || isConverting1 || isConverting2 || !image1Url || !image2Url}
-                className="h-16 px-10 rounded-2xl text-base font-bold shadow-2xl hover:shadow-primary/30 transition-all hover:scale-[1.02]"
+                className="w-full sm:w-auto h-14 sm:h-16 px-6 sm:px-10 rounded-2xl text-sm sm:text-base font-bold shadow-2xl hover:shadow-primary/30 transition-all hover:scale-[1.02] touch-manipulation"
               >
                 {isProcessing ? (
                   <span className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 animate-spin" />
-                    {statusMessage}
+                    <Sparkles className="w-5 h-5 animate-spin shrink-0" />
+                    <span className="truncate">{statusMessage}</span>
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5" />
-                    Attach & Create Joint Studio Photo
-                    <ArrowRight className="w-5 h-5 ml-1" />
+                    <Sparkles className="w-5 h-5 shrink-0" />
+                    <span>Attach & Create Joint Studio Photo</span>
+                    <ArrowRight className="w-5 h-5 ml-1 shrink-0" />
                   </span>
                 )}
               </Button>
@@ -595,33 +596,33 @@ export default function DualAdjustPage() {
           </div>
         ) : (
           /* Stage 2: Interactive Live Studio Joint Photo Editor */
-          <div className="w-full max-w-6xl space-y-8 animate-in zoom-in-95 duration-500">
+          <div className="w-full max-w-6xl space-y-6 sm:space-y-8 animate-in zoom-in-95 duration-500">
             
-            <div className="grid lg:grid-cols-[1fr_360px] gap-8 items-start">
+            <div className="grid lg:grid-cols-[1fr_360px] gap-6 lg:gap-8 items-start">
               
               {/* Left Column: Live Canvas Preview */}
               <div className="flex flex-col items-center gap-4">
-                <div className="w-full rounded-3xl border border-border bg-card/40 backdrop-blur-2xl p-6 shadow-2xl flex flex-col items-center justify-center min-h-[480px]">
+                <div className="w-full rounded-3xl border border-border bg-card/40 backdrop-blur-2xl p-4 sm:p-6 shadow-2xl flex flex-col items-center justify-center min-h-[360px] sm:min-h-[440px] md:min-h-[480px]">
                   
-                  <div className="flex items-center justify-between w-full mb-4">
+                  <div className="flex items-center justify-between w-full mb-3 sm:mb-4 flex-wrap gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 shadow-sm" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 shadow-sm shrink-0" />
                       Live Studio Joint Canvas
                     </span>
 
                     <button
                       onClick={() => setShowGuidelines(!showGuidelines)}
-                      className="text-xs text-primary hover:underline flex items-center gap-1 font-mono"
+                      className="text-xs text-primary hover:underline flex items-center gap-1 font-mono touch-manipulation"
                     >
                       <Eye className="w-3.5 h-3.5" />
-                      {showGuidelines ? "Hide Eye/Head Guides" : "Show Eye/Head Guides"}
+                      {showGuidelines ? "Hide Eye Guides" : "Show Eye Guides"}
                     </button>
                   </div>
 
                   <div className="relative rounded-2xl overflow-hidden border-2 border-border/80 shadow-2xl max-w-full flex items-center justify-center bg-black/10">
                     <canvas
                       ref={canvasRef}
-                      className="max-h-[460px] w-auto max-w-full object-contain"
+                      className="max-h-[320px] sm:max-h-[420px] md:max-h-[460px] w-auto max-w-full object-contain"
                     />
                   </div>
                 </div>
@@ -639,23 +640,23 @@ export default function DualAdjustPage() {
               </div>
 
               {/* Right Column: Studio Controls Panel */}
-              <div className="flex flex-col gap-6 p-6 rounded-3xl border border-border bg-card/60 backdrop-blur-2xl shadow-2xl">
+              <div className="flex flex-col gap-5 sm:gap-6 p-4 sm:p-6 rounded-3xl border border-border bg-card/60 backdrop-blur-2xl shadow-2xl">
                 
                 {/* 1. Backdrop Selector & Aspect Ratio */}
                 <div>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-3 flex-wrap gap-1.5">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-sky-400 to-blue-500 shadow-sm" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-sky-400 to-blue-500 shadow-sm shrink-0" />
                       Studio Backdrop Color
                     </h3>
-                    <div className="flex items-center gap-1 bg-background/60 p-1 rounded-xl border border-border/70 text-[10px]">
+                    <div className="flex items-center gap-1 bg-background/60 p-0.5 sm:p-1 rounded-xl border border-border/70 text-[10px]">
                       {(["4:3", "4:5", "1:1"] as AspectRatio[]).map((ratio) => (
                         <button
                           key={ratio}
                           type="button"
                           onClick={() => setAspectRatio(ratio)}
                           className={cn(
-                            "px-2 py-0.5 rounded-lg font-medium transition-all",
+                            "px-2 py-0.5 rounded-lg font-medium transition-all touch-manipulation",
                             aspectRatio === ratio
                               ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                               : "text-muted-foreground hover:text-foreground"
@@ -673,7 +674,7 @@ export default function DualAdjustPage() {
                         type="button"
                         onClick={() => setSelectedBg(b.id)}
                         className={cn(
-                          "p-2 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition-all",
+                          "p-2 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition-all touch-manipulation",
                           selectedBg === b.id
                             ? "border-primary bg-primary/10 ring-1 ring-primary shadow-sm"
                             : "border-border/60 bg-background/40 hover:bg-muted/40"
@@ -688,7 +689,7 @@ export default function DualAdjustPage() {
                           />
                           <span className="truncate text-[11px] text-foreground">{b.label}</span>
                         </div>
-                        {selectedBg === b.id && <Check className="w-3 h-3 text-primary" />}
+                        {selectedBg === b.id && <Check className="w-3 h-3 text-primary shrink-0" />}
                       </button>
                     ))}
                   </div>
@@ -707,20 +708,20 @@ export default function DualAdjustPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setIsSwapped(!isSwapped)}
-                      className="rounded-xl h-10 text-xs font-semibold border-border bg-background/40"
+                      className="rounded-xl h-10 text-xs font-semibold border-border bg-background/40 touch-manipulation px-2"
                     >
-                      <ArrowLeftRight className="w-3.5 h-3.5 mr-1.5 text-primary" />
-                      Swap Sides (L ⇋ R)
+                      <ArrowLeftRight className="w-3.5 h-3.5 mr-1 text-primary shrink-0" />
+                      <span className="truncate">Swap (L ⇋ R)</span>
                     </Button>
 
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setLayerOrder(layerOrder === "1_over_2" ? "2_over_1" : "1_over_2")}
-                      className="rounded-xl h-10 text-xs font-semibold border-border bg-background/40"
+                      className="rounded-xl h-10 text-xs font-semibold border-border bg-background/40 touch-manipulation px-2"
                     >
-                      <Layers className="w-3.5 h-3.5 mr-1.5 text-indigo-400" />
-                      {layerOrder === "1_over_2" ? "Left in Front" : "Right in Front"}
+                      <Layers className="w-3.5 h-3.5 mr-1 text-indigo-400 shrink-0" />
+                      <span className="truncate">{layerOrder === "1_over_2" ? "Left Front" : "Right Front"}</span>
                     </Button>
                   </div>
                 </div>
@@ -728,7 +729,7 @@ export default function DualAdjustPage() {
                 {/* 3. Spacing & Closeness Slider */}
                 <div className="space-y-1.5 pt-2 border-t border-border/50">
                   <div className="flex justify-between text-xs font-medium">
-                    <span className="text-foreground">Shoulder Spacing / Closeness</span>
+                    <span className="text-foreground">Shoulder Spacing</span>
                     <span className="font-mono text-primary font-bold">{closeness > 0 ? `+${closeness}` : closeness}</span>
                   </div>
                   <input
@@ -737,7 +738,7 @@ export default function DualAdjustPage() {
                     max={80}
                     value={closeness}
                     onChange={(e) => setCloseness(Number(e.target.value))}
-                    className="w-full accent-primary"
+                    className="w-full accent-primary touch-manipulation"
                   />
                   <div className="flex justify-between text-[10px] text-muted-foreground">
                     <span>Farther</span>

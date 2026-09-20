@@ -35,17 +35,17 @@ export function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/70 backdrop-blur-xl transition-all">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-8">
-          <Link href="/" className="flex items-center gap-2 transition-transform hover:scale-105 active:scale-95">
-            <span className="font-heading text-xl font-black tracking-tight flex items-center gap-1.5">
+      <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl transition-all">
+        <div className="container mx-auto flex h-16 items-center justify-between px-3 sm:px-4 md:px-8">
+          <Link href="/" className="flex items-center gap-2 transition-transform hover:scale-105 active:scale-95 shrink-0">
+            <span className="font-heading text-lg sm:text-xl font-black tracking-tight flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
               PixelForge<span className="text-primary font-bold">.ai</span>
             </span>
           </Link>
           
-          {/* Desktop Navigation */}
-          <nav className="hidden w-fit items-center p-1 md:flex rounded-full border border-border/50 bg-muted/20 backdrop-blur-md">
+          {/* Desktop & Tablet Navigation */}
+          <nav className="hidden lg:flex w-fit items-center p-1 rounded-full border border-border/50 bg-muted/20 backdrop-blur-md">
             {links.map((link) => {
               const isActive = pathname === link.href;
               return (
@@ -53,7 +53,7 @@ export function Navbar() {
                   key={link.href} 
                   href={link.href} 
                   className={cn(
-                    "px-4 py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-300", 
+                    "px-3.5 py-1.5 xl:px-4 xl:py-2 rounded-full text-xs font-semibold tracking-wide transition-all duration-300", 
                     isActive 
                       ? "bg-primary text-primary-foreground shadow-sm ring-1 ring-border/50" 
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -65,12 +65,12 @@ export function Navbar() {
             })}
           </nav>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             {/* Gemini API Key & Model Status Pill */}
             <button
               onClick={() => setIsKeyModalOpen(true)}
               className={cn(
-                "group relative flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-300",
+                "group relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-300 touch-manipulation",
                 apiKey 
                   ? "bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
                   : "bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border-purple-500/30 text-purple-400 hover:from-purple-500/20 hover:to-indigo-500/20"
@@ -78,17 +78,24 @@ export function Navbar() {
               title="Configure Gemini Cloud AI and Models"
             >
               <Sparkles className="w-3.5 h-3.5 animate-pulse text-primary shrink-0" />
-              <span className="font-mono text-[11px] font-bold max-w-[120px] md:max-w-[150px] truncate">
-                {apiKey ? formatModelName(selectedModel) : "Connect Gemini"}
+              <span className="font-mono text-[11px] font-bold max-w-[80px] sm:max-w-[120px] md:max-w-[150px] truncate">
+                <span className="inline sm:hidden">{apiKey ? "AI Active" : "Connect"}</span>
+                <span className="hidden sm:inline">{apiKey ? formatModelName(selectedModel) : "Connect Gemini"}</span>
               </span>
-              {apiKey && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />}
-              <SlidersHorizontal className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity ml-0.5" />
+              {apiKey && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981] shrink-0" />}
+              <SlidersHorizontal className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity ml-0.5 hidden xs:inline shrink-0" />
             </button>
 
             <ThemeToggle />
 
-            {/* Mobile Menu Toggle */}
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsOpen(!isOpen)}>
+            {/* Mobile / Tablet Menu Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden h-9 w-9 rounded-xl touch-manipulation"
+              onClick={() => setIsOpen(!isOpen)}
+              aria-label="Toggle navigation menu"
+            >
               {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </div>
@@ -96,8 +103,8 @@ export function Navbar() {
 
         {/* Mobile Drawer */}
         {isOpen && (
-          <div className="md:hidden border-t border-border/50 bg-background/95 backdrop-blur-xl p-4 animate-in slide-in-from-top-2 fade-in shadow-xl">
-            <nav className="flex flex-col gap-2">
+          <div className="lg:hidden border-t border-border/50 bg-background/95 backdrop-blur-2xl p-4 animate-in slide-in-from-top-2 fade-in shadow-2xl">
+            <nav className="flex flex-col gap-1.5">
               {links.map((link) => {
                 const isActive = pathname === link.href;
                 return (
@@ -106,11 +113,14 @@ export function Navbar() {
                     href={link.href}
                     onClick={() => setIsOpen(false)}
                     className={cn(
-                      "px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300",
-                      isActive ? "bg-primary/10 text-primary border border-primary/20" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      "px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 flex items-center justify-between touch-manipulation",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground active:scale-[0.98]"
                     )}
                   >
-                    {link.label}
+                    <span>{link.label}</span>
+                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </Link>
                 );
               })}
@@ -120,13 +130,13 @@ export function Navbar() {
                   setIsOpen(false);
                   setIsKeyModalOpen(true);
                 }}
-                className="mt-2 w-full p-3 rounded-xl border border-primary/30 bg-primary/10 text-primary text-xs font-semibold flex items-center justify-between"
+                className="mt-3 w-full p-3.5 rounded-2xl border border-primary/30 bg-primary/10 text-primary text-xs font-semibold flex items-center justify-between touch-manipulation active:scale-[0.98]"
               >
                 <span className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4" />
                   Gemini Model: {apiKey ? formatModelName(selectedModel) : "Not Connected"}
                 </span>
-                <span className="underline text-[11px]">Configure</span>
+                <span className="underline text-[11px] font-bold">Configure</span>
               </button>
             </nav>
           </div>

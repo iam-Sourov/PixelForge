@@ -145,15 +145,15 @@ export default function RemoveBgPage() {
         
         {/* Header */}
         {!originalUrl && (
-          <div className="text-center space-y-4 mb-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-mono text-primary">
+          <div className="text-center space-y-3 sm:space-y-4 mb-2 sm:mb-4 px-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[11px] sm:text-xs font-mono text-primary">
               <Sparkles className="w-3.5 h-3.5 animate-pulse" />
               Deep Learning Subject Extraction
             </div>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground break-words">
               Perfect Background Remover
             </h1>
-            <p className="text-muted-foreground md:text-lg max-w-xl mx-auto font-light">
+            <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-xl mx-auto font-light leading-relaxed">
               High-precision subject isolation with fine edge matting, passport white/blue backdrops, and transparent HD exports.
             </p>
           </div>
@@ -167,25 +167,25 @@ export default function RemoveBgPage() {
           )}
 
           {!originalUrl ? (
-            <div className="rounded-3xl border border-border bg-card/40 p-3 backdrop-blur-xl shadow-2xl transition-all hover:border-primary/50 max-w-2xl mx-auto">
+            <div className="rounded-3xl border border-border bg-card/40 p-2.5 sm:p-3 backdrop-blur-xl shadow-2xl transition-all hover:border-primary/50 max-w-2xl mx-auto">
               <UploadZone
                 onFileSelect={handleUpload}
-                className="min-h-[400px] border-dashed border-border/60 bg-transparent hover:bg-muted/30 transition-colors rounded-2xl"
+                className="min-h-[300px] sm:min-h-[400px] border-dashed border-border/60 bg-transparent hover:bg-muted/30 transition-colors rounded-2xl"
               />
             </div>
           ) : (
-            <div className="grid md:grid-cols-[1fr_320px] gap-8 items-start justify-center max-w-5xl mx-auto">
+            <div className="grid md:grid-cols-[1fr_320px] gap-6 md:gap-8 items-start justify-center max-w-5xl mx-auto">
               
               {/* Preview Canvas */}
               <div 
                 className={cn(
-                  "relative w-full overflow-hidden rounded-3xl border border-border p-8 flex flex-col items-center justify-center min-h-[480px] shadow-2xl transition-all duration-300",
+                  "relative w-full overflow-hidden rounded-3xl border border-border p-4 sm:p-8 flex flex-col items-center justify-center min-h-[320px] sm:min-h-[420px] md:min-h-[480px] shadow-2xl transition-all duration-300",
                   bgStyles[selectedBg]
                 )}
               >
                 {isProcessing && (
                   <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/70 backdrop-blur-md p-6 text-center">
-                    <div className="relative flex h-20 w-20 items-center justify-center">
+                    <div className="relative flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center">
                       <div className="absolute inset-0 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                       <Sparkles className="h-6 w-6 text-primary animate-pulse" />
                     </div>
@@ -200,27 +200,27 @@ export default function RemoveBgPage() {
                   <img
                     src={resultUrl}
                     alt="Result"
-                    className="max-h-[460px] object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in duration-500"
+                    className="max-h-[300px] sm:max-h-[400px] md:max-h-[460px] w-auto max-w-full object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in duration-500"
                   />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={originalUrl}
                     alt="Original"
-                    className="max-h-[460px] object-contain opacity-40 blur-sm"
+                    className="max-h-[300px] sm:max-h-[400px] md:max-h-[460px] w-auto max-w-full object-contain opacity-40 blur-sm"
                   />
                 )}
               </div>
 
               {/* Sidebar Backdrops & Actions */}
-              <div className="flex flex-col gap-6 p-6 rounded-3xl border border-border bg-card/50 backdrop-blur-2xl shadow-2xl">
+              <div className="flex flex-col gap-5 sm:gap-6 p-4 sm:p-6 rounded-3xl border border-border bg-card/50 backdrop-blur-2xl shadow-2xl">
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-foreground mb-3 flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 shadow-sm" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 shadow-sm shrink-0" />
                     Choose Backdrop
                   </h3>
 
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
                     {[
                       { id: "transparent", label: "Transparent", grad: "from-slate-300 via-slate-400 to-slate-300 dark:from-zinc-700 dark:via-zinc-800 dark:to-zinc-700" },
                       { id: "white", label: "Passport White", grad: "from-slate-100 via-white to-slate-200" },
@@ -235,7 +235,7 @@ export default function RemoveBgPage() {
                         type="button"
                         onClick={() => setSelectedBg(b.id as BgOption)}
                         className={cn(
-                          "p-2.5 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition-all",
+                          "p-2.5 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition-all touch-manipulation",
                           selectedBg === b.id
                             ? "border-primary bg-primary/10 ring-1 ring-primary shadow-sm"
                             : "border-border/60 bg-background/40 hover:bg-muted/40"
@@ -250,21 +250,21 @@ export default function RemoveBgPage() {
                           />
                           <span className="truncate text-[11px] text-foreground">{b.label}</span>
                         </div>
-                        {selectedBg === b.id && <Check className="w-3.5 h-3.5 text-primary" />}
+                        {selectedBg === b.id && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
                       </button>
                     ))}
                   </div>
                 </div>
 
                 {/* Main Action Buttons */}
-                <div className="space-y-3 pt-2 border-t border-border/50">
+                <div className="space-y-2.5 sm:space-y-3 pt-2 border-t border-border/50">
                   <Button
                     size="lg"
                     onClick={handleDownload}
                     disabled={!resultUrl || isProcessing}
-                    className="w-full h-14 rounded-2xl font-bold text-sm shadow-xl hover:shadow-primary/20 transition-transform hover:scale-[1.02]"
+                    className="w-full h-12 sm:h-14 rounded-2xl font-bold text-sm shadow-xl hover:shadow-primary/20 transition-transform hover:scale-[1.02] touch-manipulation"
                   >
-                    <Download className="mr-2 h-5 w-5" /> Download HD Image
+                    <Download className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Download HD Image
                   </Button>
 
                   <Button
@@ -272,7 +272,7 @@ export default function RemoveBgPage() {
                     size="sm"
                     onClick={clearImage}
                     disabled={isProcessing}
-                    className="w-full h-10 rounded-xl text-muted-foreground hover:text-foreground text-xs font-medium"
+                    className="w-full h-9 sm:h-10 rounded-xl text-muted-foreground hover:text-foreground text-xs font-medium touch-manipulation"
                   >
                     <RefreshCw className="mr-2 h-3.5 w-3.5" /> Start Over
                   </Button>

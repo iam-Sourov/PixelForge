@@ -1,18 +1,28 @@
-import type { Metadata } from "next";
-import { Geist_Mono, Inter } from "next/font/google"
+import type { Metadata, Viewport } from "next";
+import { Geist_Mono, Inter } from "next/font/google";
 
-import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'})
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
-})
+});
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+  ],
+};
 
 export const metadata: Metadata = {
   title: "PixelForge - AI Studio & Photo Workshop",
@@ -25,7 +35,7 @@ export const metadata: Metadata = {
     "Background Remover",
     "Photo Enhancer",
     "AI Studio",
-    "Bangladeshi Studio Photo"
+    "Bangladeshi Studio Photo",
   ],
   authors: [{ name: "Sourov" }],
   creator: "Sourov",
@@ -47,23 +57,23 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", inter.variable)}
+      className={cn("antialiased overflow-x-hidden", fontMono.variable, "font-sans", inter.variable)}
     >
-      <body className="flex min-h-screen flex-col bg-background text-foreground bg-noise">
+      <body className="flex min-h-screen flex-col bg-background text-foreground bg-noise overflow-x-hidden">
         <ThemeProvider>
           <Navbar />
-          <main className="flex-1">
+          <main className="flex-1 w-full overflow-x-hidden">
             {children}
           </main>
           <Footer />
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }
