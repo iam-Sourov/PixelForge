@@ -30,18 +30,15 @@ export async function POST(req: NextRequest) {
       aspectRatio = "4:3", // '4:3', '4:5', '1:1'
     } = body;
 
-    if (!image1 || !image2) {
-      return NextResponse.json({ error: "Both images are required for joint photo export." }, { status: 400 });
+    const isSingleUnifiedDuo = !image2 || image1 === image2;
+
+    if (!image1) {
+      return NextResponse.json({ error: "Image is required for joint photo export." }, { status: 400 });
     }
 
     const clean1 = cleanBase64(image1);
-    const clean2 = cleanBase64(image2);
-
     const rawBuf1 = Buffer.from(clean1.data, "base64");
-    const rawBuf2 = Buffer.from(clean2.data, "base64");
-
     const buf1 = await normalizeImageBuffer(rawBuf1);
-    const buf2 = await normalizeImageBuffer(rawBuf2);
 
     // Canvas target dimensions
     let canvasW = 1600;
@@ -67,55 +64,72 @@ export async function POST(req: NextRequest) {
       hexBg = "#0F172A";
     }
 
-    // Parse person transforms
     const p1: PersonTransform = person1;
-    const p2: PersonTransform = person2;
-
-    // Resize persons according to target canvas and scales
-    const targetSubjectH = Math.round(canvasH * 0.9);
-
-    const meta1 = await sharp(buf1).metadata();
-    const meta2 = await sharp(buf2).metadata();
-
-    const w1 = meta1.width || 800;
-    const h1 = meta1.height || 1000;
-    const w2 = meta2.width || 800;
-    const h2 = meta2.height || 1000;
-
-    const scaledH1 = Math.round(targetSubjectH * (p1.scale || 1.0));
-    const scaledW1 = Math.round((w1 / h1) * scaledH1);
-
-    const scaledH2 = Math.round(targetSubjectH * (p2.scale || 1.0));
-    const scaledW2 = Math.round((w2 / h2) * scaledH2);
-
-    const resized1 = await sharp(buf1)
-      .resize(scaledW1, scaledH1, { fit: "contain" })
-      .png()
-      .toBuffer();
-
-    const resized2 = await sharp(buf2)
-      .resize(scaledW2, scaledH2, { fit: "contain" })
-      .png()
-      .toBuffer();
-
-    // Calculate left/top coordinates
-    // Center point of canvas is (canvasW / 2, canvasH / 2)
-    // Person 1 center: canvasW / 2 + offsetX, bottom aligned at canvasH + offsetY
-    const posX1 = Math.round(canvasW / 2 - scaledW1 / 2 + (p1.offsetX * (canvasW / 800)));
-    const posY1 = Math.round(canvasH - scaledH1 + (p1.offsetY * (canvasH / 600)));
-
-    const posX2 = Math.round(canvasW / 2 - scaledW2 / 2 + (p2.offsetX * (canvasW / 800)));
-    const posY2 = Math.round(canvasH - scaledH2 + (p2.offsetY * (canvasH / 600)));
-
     const layers = [];
-    if (layerOrder === "2_over_1") {
-      // Person 1 first (behind), then Person 2 on top
-      layers.push({ input: resized1, left: posX1, top: posY1 });
-      layers.push({ input: resized2, left: posX2, top: posY2 });
+
+    if (isSingleUnifiedDuo) {
+      const meta1 = await sharp(buf1).metadata();
+      const w1 = meta1.width || 1200;
+      const h1 = meta1.height || 900;
+
+      const targetSubjectH = Math.round(canvasH * 0.94);
+      const scaledH1 = Math.round(targetSubjectH * (p1.scale || 1.0));
+      const scaledW1 = Math.round((w1 / h1) * scaledH1);
+
+      const resized1 = await sharp(buf1)
+        .resize(scaledW1, scaledH1, { fit: "contain" })
+        .png()
+        .toBuffer();
+
+      const posX1 = Math.round((canvasW - scaledW1) / 2 + (p1.offsetX * (canvasW / 800)));
+      const posY1 = Math.round(canvasH - scaledH1 + (p1.offsetY * (canvasH / 600)));
+
+      layers.push({ input: resized1, left: Math.max(0, posX1), top: Math.max(0, posY1) });
     } else {
-      // Person 2 first (behind), then Person 1 on top
-      layers.push({ input: resized2, left: posX2, top: posY2 });
-      layers.push({ input: resized1, left: posX1, top: posY1 });
+      const clean2 = cleanBase64(image2);
+      const rawBuf2 = Buffer.from(clean2.data, "base64");
+      const buf2 = await normalizeImageBuffer(rawBuf2);
+
+      const p2: PersonTransform = person2;
+      const targetSubjectH = Math.round(canvasH * 0.9);
+
+      const meta1 = await sharp(buf1).metadata();
+      const meta2 = await sharp(buf2).metadata();
+
+      const w1 = meta1.width || 800;
+      const h1 = meta1.height || 1000;
+      const w2 = meta2.width || 800;
+      const h2 = meta2.height || 1000;
+
+      const scaledH1 = Math.round(targetSubjectH * (p1.scale || 1.0));
+      const scaledW1 = Math.round((w1 / h1) * scaledH1);
+
+      const scaledH2 = Math.round(targetSubjectH * (p2.scale || 1.0));
+      const scaledW2 = Math.round((w2 / h2) * scaledH2);
+
+      const resized1 = await sharp(buf1)
+        .resize(scaledW1, scaledH1, { fit: "contain" })
+        .png()
+        .toBuffer();
+
+      const resized2 = await sharp(buf2)
+        .resize(scaledW2, scaledH2, { fit: "contain" })
+        .png()
+        .toBuffer();
+
+      const posX1 = Math.round(canvasW / 2 - scaledW1 / 2 + (p1.offsetX * (canvasW / 800)));
+      const posY1 = Math.round(canvasH - scaledH1 + (p1.offsetY * (canvasH / 600)));
+
+      const posX2 = Math.round(canvasW / 2 - scaledW2 / 2 + (p2.offsetX * (canvasW / 800)));
+      const posY2 = Math.round(canvasH - scaledH2 + (p2.offsetY * (canvasH / 600)));
+
+      if (layerOrder === "2_over_1") {
+        layers.push({ input: resized1, left: posX1, top: posY1 });
+        layers.push({ input: resized2, left: posX2, top: posY2 });
+      } else {
+        layers.push({ input: resized2, left: posX2, top: posY2 });
+        layers.push({ input: resized1, left: posX1, top: posY1 });
+      }
     }
 
     // Compose onto studio background
