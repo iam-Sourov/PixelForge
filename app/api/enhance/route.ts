@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
-import path from "path";
 import sharp from "sharp";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { normalizeImageBuffer } from "@/lib/image-buffer";
 import { bilateralFilterDenoise } from "@/lib/image-math";
 
@@ -29,7 +27,7 @@ const cleanBase64 = (b64: string): { data: string; mimeType: string } => {
 };
 
 /**
- * Cloud AI Image Enhancement via Gemini Pro / Flash vision models
+ * Cloud AI Image Enhancement via Gemini vision models
  */
 async function runGeminiEnhancer(
   imageBuffer: Buffer,
@@ -38,9 +36,19 @@ async function runGeminiEnhancer(
   mode: string,
   customPrompt?: string
 ): Promise<{ buffer: Buffer; insights: string }> {
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const cleanModel = modelId.replace(/^models\//, "");
-  const model = genAI.getGenerativeModel({ model: cleanModel });
+  const ai = new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        "User-Agent": "aistudio-build",
+      },
+    },
+  });
+
+  let cleanModel = modelId ? modelId.replace(/^models\//, "") : "gemini-3.8-flash";
+  if (cleanModel.includes("1.5") || cleanModel.includes("2.0") || cleanModel === "gemini-pro") {
+    cleanModel = "gemini-3.8-flash";
+  }
 
   const promptGuides: Record<string, string> = {
     portrait:
@@ -56,17 +64,20 @@ async function runGeminiEnhancer(
   let multipliers = { brightness: 1.03, saturation: 1.05, sharpness: 1.2 };
 
   try {
-    const result = await model.generateContent([
-      promptGuides[mode] || promptGuides.portrait,
-      {
-        inlineData: {
-          data: imageBuffer.toString("base64"),
-          mimeType: "image/jpeg",
+    const response = await ai.models.generateContent({
+      model: cleanModel,
+      contents: [
+        {
+          inlineData: {
+            data: imageBuffer.toString("base64"),
+            mimeType: "image/jpeg",
+          },
         },
-      },
-    ]);
+        promptGuides[mode] || promptGuides.portrait,
+      ],
+    });
 
-    const text = result.response.text();
+    const text = response.text || "";
     insights = text.replace(/```json[\s\S]*?```/, "").trim();
 
     const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
@@ -96,89 +107,6 @@ async function runGeminiEnhancer(
 
   const outBuffer = await pipeline.png().toBuffer();
   return { buffer: outBuffer, insights };
-}
-
-/**
- * Executes the Python-based image enhancer script.
- */
-function runPythonEnhancer(imageBuffer: Buffer, scriptPath: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let resolved = false;
-    let proc: ReturnType<typeof spawn> | null = null;
-
-    const timer = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        if (proc) {
-          try {
-            proc.kill("SIGKILL");
-          } catch (e) {
-            console.error("Failed to kill timed-out Python process:", e);
-          }
-        }
-        reject(new Error("Python process timed out."));
-      }
-    }, 60000);
-
-    const trySpawn = (cmd: string) => {
-      let stdoutData = "";
-      let stderrData = "";
-      
-      proc = spawn(cmd, [scriptPath]);
-
-      proc.on("error", (err) => {
-        if (resolved) return;
-        if (cmd === "python3" && (err as NodeJS.ErrnoException).code === "ENOENT") {
-          trySpawn("python");
-        } else {
-          clearTimeout(timer);
-          resolved = true;
-          reject(err);
-        }
-      });
-
-      if (proc.stdout) {
-        proc.stdout.on("data", (data) => {
-          stdoutData += data.toString();
-        });
-      }
-
-      if (proc.stderr) {
-        proc.stderr.on("data", (data) => {
-          stderrData += data.toString();
-        });
-      }
-
-      proc.on("close", (code) => {
-        if (resolved) return;
-        clearTimeout(timer);
-        resolved = true;
-        
-        if (code !== 0) {
-          reject(new Error(stderrData || `Python process exited with code ${code}`));
-        } else {
-          resolve(stdoutData);
-        }
-      });
-
-      try {
-        if (proc.stdin) {
-          proc.stdin.write(imageBuffer.toString("base64"));
-          proc.stdin.end();
-        } else {
-          throw new Error("stdin stream is null");
-        }
-      } catch (err) {
-        if (!resolved) {
-          clearTimeout(timer);
-          resolved = true;
-          reject(err);
-        }
-      }
-    };
-
-    trySpawn("python3");
-  });
 }
 
 /**
@@ -237,14 +165,19 @@ export async function POST(req: NextRequest) {
     let enhancedBase64 = "";
     let aiInsights = "";
 
-    // 1. If user provided a Gemini API Key, use Cloud AI remastering
-    if (apiKey && apiKey.trim() !== "") {
+    // 1. If user provided a Gemini API Key or env key exists, use Cloud AI remastering
+    const effectiveApiKey = (apiKey && typeof apiKey === "string" && apiKey.trim() !== "")
+      ? apiKey.trim()
+      : (process.env.GEMINI_API_KEY || "");
+
+    if (effectiveApiKey) {
       try {
-        console.log(`Enhancing image using Gemini Cloud AI (${model || "gemini-2.5-pro"})...`);
+        const targetModel = model || "gemini-3.8-flash";
+        console.log(`Enhancing image using Gemini Cloud AI (${targetModel})...`);
         const geminiResult = await runGeminiEnhancer(
           imageBuffer,
-          apiKey.trim(),
-          model || "gemini-2.5-pro",
+          effectiveApiKey,
+          targetModel,
           mode,
           customPrompt
         );
@@ -255,19 +188,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. If no cloud result, run local Python/Node enhancer
+    // 2. If no cloud result, run local Node enhancer
     if (!enhancedBase64) {
-      if (process.env.VERCEL) {
-        // Direct ultra-fast Sharp + Node enhancer in Vercel serverless environment
-        enhancedBase64 = await runNodeEnhancer(imageBuffer);
-      } else {
-        const scriptPath = path.join(process.cwd(), "lib", "enhancer.py");
-        try {
-          enhancedBase64 = await runPythonEnhancer(imageBuffer, scriptPath);
-        } catch {
-          enhancedBase64 = await runNodeEnhancer(imageBuffer);
-        }
-      }
+      enhancedBase64 = await runNodeEnhancer(imageBuffer);
     }
 
     return NextResponse.json({ 
@@ -283,3 +206,4 @@ export async function POST(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
