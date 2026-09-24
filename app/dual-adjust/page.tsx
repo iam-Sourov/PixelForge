@@ -18,8 +18,7 @@ import {
   FileImage, 
   Eye,
   Users,
-  UserCheck,
-  Image as ImageIcon
+  UserCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMounted } from "@/lib/use-mounted";
@@ -137,9 +136,9 @@ export default function DualAdjustPage() {
     });
   };
 
-  // Helper to auto-clean background clutter (green plastic bag above hijab, printer box on bottom left)
+  // Helper to safely clean edge transparency noise without altering real clothing colors
   const autoCleanDuoCutout = (dataUrl: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => {
@@ -151,57 +150,26 @@ export default function DualAdjustPage() {
           canvas.width = w;
           canvas.height = h;
           const ctx = canvas.getContext("2d");
-          if (!ctx) return reject(new Error("Canvas context failed"));
+          if (!ctx) return resolve(dataUrl);
 
           ctx.drawImage(img, 0, 0);
           const imgData = ctx.getImageData(0, 0, w, h);
           const data = imgData.data;
 
-          // 1. Clean green plastic bag clutter above the scarf on top-right quadrant (x > 0.52 * w, y < 0.35 * h)
-          for (let y = 0; y < Math.floor(h * 0.35); y++) {
-            for (let x = Math.floor(w * 0.52); x < w; x++) {
-              const idx = (y * w + x) * 4;
-              const r = data[idx];
-              const g = data[idx + 1];
-              const b = data[idx + 2];
-              const alpha = data[idx + 3];
-
-              if (alpha > 20) {
-                // Detect green/cyan plastic bag artifact touching or floating above scarf
-                const isGreenBag = (g > r + 10 && g > b + 5) || (g > 95 && r < 100 && b > 70) || (g > 115 && r < 115);
-                if (isGreenBag) {
-                  data[idx + 3] = 0; // Erase artifact
-                }
-              }
-            }
-          }
-
-          // 2. Clean bottom-left printer fragment (furniture clutter near man's arm)
-          for (let y = Math.floor(h * 0.70); y < h; y++) {
-            for (let x = 0; x < Math.floor(w * 0.26); x++) {
-              const idx = (y * w + x) * 4;
-              const r = data[idx];
-              const g = data[idx + 1];
-              const b = data[idx + 2];
-              const alpha = data[idx + 3];
-
-              if (alpha > 20) {
-                // Detect detached printer/furniture box clutter on bottom left
-                const isGrayClutter = Math.abs(r - g) < 30 && Math.abs(g - b) < 30 && r < 200;
-                if (isGrayClutter) {
-                  data[idx + 3] = 0; // Erase clutter
-                }
-              }
+          // Safe thresholding for tiny floating translucent dust
+          for (let i = 0; i < data.length; i += 4) {
+            if (data[i + 3] < 12) {
+              data[i + 3] = 0;
             }
           }
 
           ctx.putImageData(imgData, 0, 0);
           resolve(canvas.toDataURL("image/png"));
-        } catch (err) {
-          reject(err);
+        } catch {
+          resolve(dataUrl);
         }
       };
-      img.onerror = reject;
+      img.onerror = () => resolve(dataUrl);
       img.src = dataUrl;
     });
   };
@@ -585,11 +553,12 @@ export default function DualAdjustPage() {
     }
   }, [drawComposite, person1Transparent, person2Transparent]);
 
-  const handleExport = async (format: "single_jpg" | "single_png" | "sheet_4x6") => {
+  const handleExport = async (format: "single_jpg" | "single_png" | "sheet_4x6" | "psd") => {
     if (!person1Transparent || !person2Transparent) return;
 
     setIsExporting(true);
     try {
+      const isUnified = inputMode === "combined" || person1Transparent === person2Transparent;
       const src1 = isSwapped ? person2Transparent : person1Transparent;
       const src2 = isSwapped ? person1Transparent : person2Transparent;
 
@@ -606,9 +575,13 @@ export default function DualAdjustPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           image1: src1,
-          image2: src2,
-          person1: { scale: s1, offsetX: -separation, offsetY: yOff1 },
-          person2: { scale: s2, offsetX: separation, offsetY: yOff2 },
+          image2: isUnified ? null : src2,
+          person1: isUnified
+            ? { scale: scale1, offsetX: 0, offsetY: offsetY1 }
+            : { scale: s1, offsetX: -separation, offsetY: yOff1 },
+          person2: isUnified
+            ? { scale: scale1, offsetX: 0, offsetY: offsetY1 }
+            : { scale: s2, offsetX: separation, offsetY: yOff2 },
           layerOrder,
           bgColor: selectedBg,
           aspectRatio,
@@ -625,9 +598,11 @@ export default function DualAdjustPage() {
       const a = document.createElement("a");
       a.href = url;
 
-      let filename = `pixelforge-joint-portrait-${Date.now()}.${format === "single_png" ? "png" : "jpg"}`;
+      let filename = `bangladesh-joint-portrait-${Date.now()}.${format === "single_png" ? "png" : format === "psd" ? "psd" : "jpg"}`;
       if (format === "sheet_4x6") {
-        filename = `pixelforge-joint-4x6-print-sheet-${Date.now()}.jpg`;
+        filename = `bangladesh-joint-4x6-print-sheet-${Date.now()}.jpg`;
+      } else if (format === "psd") {
+        filename = `bangladesh-joint-portrait-master-${Date.now()}.psd`;
       }
 
       a.download = filename;
@@ -1014,6 +989,49 @@ export default function DualAdjustPage() {
                   </div>
                 </div>
 
+                {/* Combined couple framing controls */}
+                {inputMode === "combined" && (
+                  <div className="p-3.5 rounded-2xl bg-background/40 border border-border/60 space-y-3">
+                    <div className="flex items-center justify-between text-xs font-bold text-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500" />
+                        Couple Framing & Alignment
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
+                        <span>Couple Scale / Zoom</span>
+                        <span className="text-foreground font-bold">{(scale1 * 100).toFixed(0)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0.8}
+                        max={1.3}
+                        step={0.02}
+                        value={scale1}
+                        onChange={(e) => setScale1(Number(e.target.value))}
+                        className="w-full accent-emerald-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
+                        <span>Vertical Height (Eye Level)</span>
+                        <span className="text-foreground font-bold">{offsetY1}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={-80}
+                        max={80}
+                        value={offsetY1}
+                        onChange={(e) => setOffsetY1(Number(e.target.value))}
+                        className="w-full accent-emerald-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Manual placement controls only for separate photos mode */}
                 {inputMode === "separate" && (
                   <>
@@ -1163,15 +1181,16 @@ export default function DualAdjustPage() {
                     <Download className="w-4 h-4 mr-2" /> Download Master Joint Photo (JPG)
                   </Button>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleExport("single_png")}
                       disabled={isExporting}
-                      className="rounded-xl h-10 text-xs font-semibold border-border bg-background/50"
+                      className="rounded-xl h-10 text-xs font-semibold border-border bg-background/50 px-2"
                     >
-                      <FileImage className="w-3.5 h-3.5 mr-1.5 text-emerald-400" /> PNG Format
+                      <FileImage className="w-3.5 h-3.5 mr-1 text-emerald-400 shrink-0" />
+                      <span className="truncate">PNG</span>
                     </Button>
 
                     <Button
@@ -1179,9 +1198,21 @@ export default function DualAdjustPage() {
                       size="sm"
                       onClick={() => handleExport("sheet_4x6")}
                       disabled={isExporting}
-                      className="rounded-xl h-10 text-xs font-semibold border-border bg-background/50"
+                      className="rounded-xl h-10 text-xs font-semibold border-border bg-background/50 px-2"
                     >
-                      <Layers className="w-3.5 h-3.5 mr-1.5 text-primary" /> 4×6&quot; Print Sheet
+                      <Layers className="w-3.5 h-3.5 mr-1 text-primary shrink-0" />
+                      <span className="truncate">4×6″ Sheet</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleExport("psd")}
+                      disabled={isExporting}
+                      className="rounded-xl h-10 text-xs font-semibold border-border bg-background/50 px-2"
+                    >
+                      <Layers className="w-3.5 h-3.5 mr-1 text-indigo-400 shrink-0" />
+                      <span className="truncate">PSD Layers</span>
                     </Button>
                   </div>
 
