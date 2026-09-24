@@ -1,0 +1,6 @@
+{
+  "name": "PixelForge - AI Studio & Photo Workshop",
+  "description": "Next-generation AI Photo Studio for 2-Picture Joint photos, instant background removal, portrait remastering, and passport photo generation.",
+  "permissions": [],
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

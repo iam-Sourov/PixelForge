@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 
 import "./globals.css";
+import "@/lib/fetch-patch";
 import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import { Navbar } from "@/components/shared/Navbar";
@@ -65,6 +66,55 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn("antialiased overflow-x-hidden", fontMono.variable, "font-sans", inter.variable)}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+(function() {
+  try {
+    var win = typeof window !== 'undefined' ? window : typeof self !== 'undefined' ? self : globalThis;
+    if (!win) return;
+
+    // Define a robust getter/setter for fetch on window instance
+    // so any library assigning window.fetch = ... will succeed without "Cannot set property fetch of #<Window> which has only a getter"
+    try {
+      var activeFetch = win.fetch;
+      Object.defineProperty(win, 'fetch', {
+        get: function() {
+          return activeFetch;
+        },
+        set: function(fn) {
+          activeFetch = typeof fn === 'function' ? fn : activeFetch;
+        },
+        configurable: true,
+        enumerable: true
+      });
+    } catch (e) {}
+
+    // Suppress any uncaught "Cannot set property fetch of #<Window> which has only a getter"
+    var suppressFetchError = function(e) {
+      var msg = (e && (e.message || (e.error && e.error.message))) || '';
+      if (typeof msg === 'string' && msg.indexOf('fetch') !== -1 && msg.indexOf('getter') !== -1) {
+        if (e.preventDefault) e.preventDefault();
+        if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+        return true;
+      }
+    };
+
+    win.addEventListener('error', suppressFetchError, true);
+    win.addEventListener('unhandledrejection', function(e) {
+      var reason = e && e.reason;
+      var msg = (reason && (reason.message || String(reason))) || '';
+      if (typeof msg === 'string' && msg.indexOf('fetch') !== -1 && msg.indexOf('getter') !== -1) {
+        if (e.preventDefault) e.preventDefault();
+      }
+    }, true);
+  } catch (err) {}
+})();
+`,
+          }}
+        />
+      </head>
       <body className="flex min-h-screen flex-col bg-background text-foreground bg-noise overflow-x-hidden">
         <ThemeProvider>
           <Navbar />

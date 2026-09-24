@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { apiKey } = await req.json();
+    const { apiKey } = await req.json().catch(() => ({}));
 
-    if (!apiKey || typeof apiKey !== "string") {
+    const effectiveKey =
+      apiKey && typeof apiKey === "string" && apiKey.trim() !== ""
+        ? apiKey.trim()
+        : process.env.GEMINI_API_KEY || "";
+
+    if (!effectiveKey) {
       return NextResponse.json({ error: "Missing or invalid API key" }, { status: 400 });
     }
 
-    const trimmedKey = apiKey.trim();
+    const trimmedKey = effectiveKey.trim();
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(trimmedKey)}`;
 
     const response = await fetch(endpoint, {
@@ -49,9 +54,10 @@ export async function POST(req: NextRequest) {
         const isFlash = id.toLowerCase().includes("flash");
         const isVision =
           id.includes("vision") ||
+          id.includes("gemini-3") ||
+          id.includes("gemini-2.5") ||
           id.includes("gemini-1.5") ||
           id.includes("gemini-2.0") ||
-          id.includes("gemini-2.5") ||
           id.includes("gemini-pro");
         const isImageGen = id.toLowerCase().includes("imagen");
 
@@ -68,14 +74,13 @@ export async function POST(req: NextRequest) {
         };
       });
 
-    // Sort to prioritize latest Pro and Flash models at top
+    // Sort to prioritize latest models at top
     relevantModels.sort((a, b) => {
-      // Prioritize 2.5 > 2.0 > 1.5 > others
       const score = (id: string) => {
         let s = 0;
+        if (id.includes("3.8") || id.includes("3.1")) s += 120;
         if (id.includes("2.5")) s += 100;
         if (id.includes("2.0")) s += 80;
-        if (id.includes("1.5")) s += 60;
         if (id.includes("pro")) s += 30;
         if (id.includes("flash")) s += 20;
         return s;
