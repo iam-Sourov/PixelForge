@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { normalizeImageBuffer } from "@/lib/image-buffer";
 import { birefnetBridge } from "@/lib/birefnet-bridge";
 
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       person1Transparent: p1TransInput,
       person2Transparent: p2TransInput,
       apiKey, 
-      model = "gemini-2.5-pro" 
+      model = "gemini-3.8-flash" 
     } = body;
 
     if (!image1 || !image2) {
@@ -56,17 +56,15 @@ export async function POST(req: NextRequest) {
 
     // 1. If cutouts were not already provided from the client, try extracting
     if (!person1Transparent || !person2Transparent) {
-      if (!process.env.VERCEL) {
-        try {
-          const [p1, p2] = await Promise.all([
-            person1Transparent ? Promise.resolve(person1Transparent) : birefnetBridge.removeBackground(normB64_1),
-            person2Transparent ? Promise.resolve(person2Transparent) : birefnetBridge.removeBackground(normB64_2),
-          ]);
-          person1Transparent = p1;
-          person2Transparent = p2;
-        } catch (bridgeErr) {
-          console.warn("[Joint API] Background bridge note:", bridgeErr);
-        }
+      try {
+        const [p1, p2] = await Promise.all([
+          person1Transparent ? Promise.resolve(person1Transparent) : birefnetBridge.removeBackground(normB64_1),
+          person2Transparent ? Promise.resolve(person2Transparent) : birefnetBridge.removeBackground(normB64_2),
+        ]);
+        person1Transparent = p1;
+        person2Transparent = p2;
+      } catch (bridgeErr) {
+        console.warn("[Joint API] Background bridge note:", bridgeErr);
       }
 
       // Fallback to normalized original photos if background removal was unavailable
@@ -76,33 +74,47 @@ export async function POST(req: NextRequest) {
 
     let aiAnalysis = "Studio subject isolation completed. Adjust positioning, head scales, and backdrop in the studio editor.";
 
-    // 2. If Gemini API key is provided, compute studio color & lighting balance
-    if (apiKey && apiKey.trim() !== "") {
+    // 2. If Gemini API key is provided or available in env, compute studio color & lighting balance
+    const effectiveApiKey = (apiKey && apiKey.trim() !== "") ? apiKey.trim() : (process.env.GEMINI_API_KEY || "");
+    if (effectiveApiKey) {
       try {
-        const genAI = new GoogleGenerativeAI(apiKey.trim());
-        const cleanModelId = model.replace(/^models\//, "");
-        const geminiModel = genAI.getGenerativeModel({ model: cleanModelId });
+        const ai = new GoogleGenAI({
+          apiKey: effectiveApiKey,
+          httpOptions: {
+            headers: {
+              "User-Agent": "aistudio-build",
+            },
+          },
+        });
+
+        let cleanModelId = model ? model.replace(/^models\//, "") : "gemini-3.8-flash";
+        if (cleanModelId.includes("1.5") || cleanModelId.includes("2.0") || cleanModelId === "gemini-pro") {
+          cleanModelId = "gemini-3.8-flash";
+        }
 
         const prompt =
           "You are an expert portrait retoucher specializing in Bangladeshi studio joint/duo photographs. Analyze Person 1 (left) and Person 2 (right). Explain how both portraits should be balanced in terms of color temperature, exposure level, and eye-level alignment so they look natural side-by-side as a couple/duo studio shot. Provide a concise 2-3 bullet point summary.";
 
-        const result = await geminiModel.generateContent([
-          prompt,
-          {
-            inlineData: {
-              data: normBuf1.toString("base64"),
-              mimeType: "image/png",
+        const result = await ai.models.generateContent({
+          model: cleanModelId,
+          contents: [
+            prompt,
+            {
+              inlineData: {
+                data: normBuf1.toString("base64"),
+                mimeType: "image/png",
+              },
             },
-          },
-          {
-            inlineData: {
-              data: normBuf2.toString("base64"),
-              mimeType: "image/png",
+            {
+              inlineData: {
+                data: normBuf2.toString("base64"),
+                mimeType: "image/png",
+              },
             },
-          },
-        ]);
+          ],
+        });
 
-        aiAnalysis = result.response.text();
+        aiAnalysis = result.text || "";
       } catch (geminiError) {
         console.warn("[Joint Photo] Gemini analysis warning:", geminiError);
       }
