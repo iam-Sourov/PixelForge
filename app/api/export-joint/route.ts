@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
+import { writePsd } from "ag-psd";
 import { normalizeImageBuffer } from "@/lib/image-buffer";
 
 interface PersonTransform {
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
       person2 = { scale: 1.0, offsetX: 120, offsetY: 0 },
       layerOrder = "1_over_2", // '1_over_2' or '2_over_1'
       bgColor = "#BAE6FD", // default BD Studio Sky Blue
-      format = "single_jpg", // 'single_jpg', 'single_png', 'sheet_4x6'
+      format = "single_jpg", // 'single_jpg', 'single_png', 'sheet_4x6', 'psd'
       aspectRatio = "4:3", // '4:3', '4:5', '1:1'
     } = body;
 
@@ -62,10 +63,13 @@ export async function POST(req: NextRequest) {
       hexBg = "#E5E7EB";
     } else if (bgColor === "dark") {
       hexBg = "#0F172A";
+    } else if (bgColor === "blue") {
+      hexBg = "#BAE6FD";
     }
 
     const p1: PersonTransform = person1;
-    const layers = [];
+    const layers: Array<{ input: Buffer; left: number; top: number }> = [];
+    const psdLayers: Array<{ name: string; left: number; top: number; buffer: Buffer }> = [];
 
     if (isSingleUnifiedDuo) {
       const meta1 = await sharp(buf1).metadata();
@@ -81,10 +85,14 @@ export async function POST(req: NextRequest) {
         .png()
         .toBuffer();
 
-      const posX1 = Math.round((canvasW - scaledW1) / 2 + (p1.offsetX * (canvasW / 800)));
-      const posY1 = Math.round(canvasH - scaledH1 + (p1.offsetY * (canvasH / 600)));
+      const posX1 = Math.round((canvasW - scaledW1) / 2 + ((p1.offsetX || 0) * (canvasW / 800)));
+      const posY1 = Math.round(canvasH - scaledH1 + ((p1.offsetY || 0) * (canvasH / 600)));
 
-      layers.push({ input: resized1, left: Math.max(0, posX1), top: Math.max(0, posY1) });
+      const safeLeft = Math.max(0, posX1);
+      const safeTop = Math.max(0, posY1);
+
+      layers.push({ input: resized1, left: safeLeft, top: safeTop });
+      psdLayers.push({ name: "Couple Subjects", left: safeLeft, top: safeTop, buffer: resized1 });
     } else {
       const clean2 = cleanBase64(image2);
       const rawBuf2 = Buffer.from(clean2.data, "base64");
@@ -126,9 +134,15 @@ export async function POST(req: NextRequest) {
       if (layerOrder === "2_over_1") {
         layers.push({ input: resized1, left: posX1, top: posY1 });
         layers.push({ input: resized2, left: posX2, top: posY2 });
+
+        psdLayers.push({ name: "Person 1 (Back)", left: posX1, top: posY1, buffer: resized1 });
+        psdLayers.push({ name: "Person 2 (Front)", left: posX2, top: posY2, buffer: resized2 });
       } else {
         layers.push({ input: resized2, left: posX2, top: posY2 });
         layers.push({ input: resized1, left: posX1, top: posY1 });
+
+        psdLayers.push({ name: "Person 2 (Back)", left: posX2, top: posY2, buffer: resized2 });
+        psdLayers.push({ name: "Person 1 (Front)", left: posX1, top: posY1, buffer: resized1 });
       }
     }
 
@@ -155,7 +169,7 @@ export async function POST(req: NextRequest) {
         status: 200,
         headers: {
           "Content-Type": "image/png",
-          "Content-Disposition": 'attachment; filename="pixelforge-joint-portrait.png"',
+          "Content-Disposition": 'attachment; filename="bangladesh-joint-portrait.png"',
         },
       });
     }
@@ -170,31 +184,44 @@ export async function POST(req: NextRequest) {
         status: 200,
         headers: {
           "Content-Type": "image/jpeg",
-          "Content-Disposition": 'attachment; filename="pixelforge-joint-portrait.jpg"',
+          "Content-Disposition": 'attachment; filename="bangladesh-joint-portrait.jpg"',
         },
       });
     }
 
     if (format === "sheet_4x6") {
       // 4x6" Studio Print Sheet (1800 x 1200 px @ 300 DPI)
-      // Arrange 2 large joint photos (or 4 mini joint photos) on 4x6" print sheet
+      // Arrange 2 medium joint prints or 4 wallet prints on standard 4R photo paper
       const sheetW = 1800;
       const sheetH = 1200;
 
-      const miniW = 840;
-      const miniH = 540;
+      // Fit 2 large joint photos side-by-side or 4 mini joint photos
+      // For 4:3 joint photo (ratio 1.333), fit two 840x630 photos or four 820x540 photos with cutting borders
+      const miniW = 820;
+      const miniH = Math.round((miniW * canvasH) / canvasW);
 
-      const miniBuff = await sharp(composedBuffer)
-        .resize(miniW, miniH, { fit: "contain", background: hexBg })
+      const rawMiniBuff = await sharp(composedBuffer)
+        .resize(miniW, Math.min(540, miniH), { fit: "contain", background: hexBg })
         .flatten({ background: hexBg })
         .jpeg({ quality: 98 })
         .toBuffer();
 
+      // Subtle cutting border
+      const borderedMini = await sharp(rawMiniBuff)
+        .extend({
+          top: 1,
+          bottom: 1,
+          left: 1,
+          right: 1,
+          background: { r: 209, g: 213, b: 219, alpha: 1 },
+        })
+        .toBuffer();
+
       const printItems = [
-        { input: miniBuff, left: 40, top: 40 },
-        { input: miniBuff, left: 920, top: 40 },
-        { input: miniBuff, left: 40, top: 620 },
-        { input: miniBuff, left: 920, top: 620 },
+        { input: borderedMini, left: 50, top: 40 },
+        { input: borderedMini, left: 930, top: 40 },
+        { input: borderedMini, left: 50, top: 610 },
+        { input: borderedMini, left: 930, top: 610 },
       ];
 
       const sheetBuffer = await sharp({
@@ -213,7 +240,66 @@ export async function POST(req: NextRequest) {
         status: 200,
         headers: {
           "Content-Type": "image/jpeg",
-          "Content-Disposition": 'attachment; filename="pixelforge-joint-4x6-print-sheet.jpg"',
+          "Content-Disposition": 'attachment; filename="bangladesh-joint-4x6-print-sheet.jpg"',
+        },
+      });
+    }
+
+    if (format === "psd") {
+      // Create multi-layer Photoshop file
+      const psdChildren: Array<Record<string, unknown>> = [];
+
+      // Background layer
+      const bgBuffer = Buffer.alloc(canvasW * canvasH * 4, 255);
+      // Fill background color
+      for (let i = 0; i < canvasW * canvasH; i++) {
+        bgBuffer[i * 4] = bgRgb.r;
+        bgBuffer[i * 4 + 1] = bgRgb.g;
+        bgBuffer[i * 4 + 2] = bgRgb.b;
+        bgBuffer[i * 4 + 3] = isTransparent ? 0 : 255;
+      }
+
+      psdChildren.push({
+        name: "Studio Backdrop",
+        imageData: {
+          width: canvasW,
+          height: canvasH,
+          data: new Uint8ClampedArray(bgBuffer),
+        },
+      });
+
+      // Subject layers
+      for (const layer of psdLayers) {
+        const { data, info } = await sharp(layer.buffer)
+          .ensureAlpha()
+          .raw()
+          .toBuffer({ resolveWithObject: true });
+
+        psdChildren.push({
+          name: layer.name,
+          left: Math.max(0, layer.left),
+          top: Math.max(0, layer.top),
+          imageData: {
+            width: info.width,
+            height: info.height,
+            data: new Uint8ClampedArray(data),
+          },
+        });
+      }
+
+      const psdData = {
+        width: canvasW,
+        height: canvasH,
+        children: psdChildren,
+      };
+
+      const psdBuffer = writePsd(psdData as import("ag-psd").Psd);
+
+      return new NextResponse(Buffer.from(psdBuffer) as unknown as BodyInit, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "Content-Disposition": 'attachment; filename="bangladesh-joint-portrait-master.psd"',
         },
       });
     }
@@ -237,3 +323,4 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
     b: num & 255,
   };
 }
+
