@@ -36,7 +36,7 @@ export const useGeminiStore = create<GeminiState>()(
   persist(
     (set, get) => ({
       apiKey: "",
-      selectedModel: "gemini-2.5-pro",
+      selectedModel: "gemini-3.8-flash",
       availableModels: [],
       isValidating: false,
       isKeyModalOpen: false,
@@ -99,7 +99,7 @@ export const useGeminiStore = create<GeminiState>()(
       clearKey: () =>
         set({
           apiKey: "",
-          selectedModel: "gemini-2.5-pro",
+          selectedModel: "gemini-3.8-flash",
           availableModels: [],
           lastValidatedKey: "",
         }),
